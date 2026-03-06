@@ -1,0 +1,106 @@
+"""
+gRPC Server Entry Point
+Python gRPC 서버 실행 (Port 50051)
+
+Usage:
+    python -m app.main_grpc
+"""
+
+import sys
+import os
+# 생성된 gRPC 폴더를 파이썬 경로에 강제로 추가해서 Import 에러 방지
+sys.path.append(os.path.join(os.path.dirname(__file__), 'grpc_generated'))
+
+import asyncio
+import logging
+from concurrent import futures
+
+import grpc
+from grpc_reflection.v1alpha import reflection
+
+# gRPC generated code
+from app.grpc_generated import chat_service_pb2
+from app.grpc_generated import chat_service_pb2_grpc
+
+# Servicer implementation
+from app.grpc_server.chatbot_servicer import ChatbotServicer
+
+# Database lifecycle
+from app.clients.database_client import DatabaseClient
+from app.core.config import get_settings
+
+# Get settings
+settings = get_settings()
+
+# Logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+async def serve():
+    """
+    gRPC 서버 실행
+    
+    - Port: 50051
+    - Max Workers: 10
+    - Reflection: Enabled (grpcurl 테스트용)
+    """
+    # Database 클라이언트 초기화 (먼저 수행)
+    db_client = None
+    try:
+        from app.clients.database_client import get_database_client
+        db_client = await get_database_client()
+        logger.info("Database connection pool initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize database pool: {e}")
+        raise
+    
+    # gRPC 서버 생성
+    server = grpc.aio.server(
+        futures.ThreadPoolExecutor(max_workers=10),
+        options=[
+            ('grpc.max_send_message_length', 50 * 1024 * 1024),  # 50MB
+            ('grpc.max_receive_message_length', 50 * 1024 * 1024),  # 50MB
+        ]
+    )
+    
+    # Servicer 등록
+    chatbot_servicer = ChatbotServicer()
+    chat_service_pb2_grpc.add_ChatbotServiceServicer_to_server(
+        chatbot_servicer, server
+    )
+    
+    # Reflection 등록 (grpcurl 테스트용)
+    SERVICE_NAMES = (
+        chat_service_pb2.DESCRIPTOR.services_by_name['ChatbotService'].full_name,
+        reflection.SERVICE_NAME,
+    )
+    reflection.enable_server_reflection(SERVICE_NAMES, server)
+    
+    # 서버 시작
+    listen_addr = f'[::]:{settings.grpc_port}'
+    server.add_insecure_port(listen_addr)
+    
+    logger.info(f"Starting gRPC server on {listen_addr}")
+    logger.info(f"AWS Region: {settings.aws_region}")
+    logger.info(f"Bedrock Model: {settings.bedrock_model_id}")
+    logger.info(f"Database: {settings.db_host}:{settings.db_port}/{settings.db_name}")
+    
+    await server.start()
+    logger.info("gRPC server started successfully")
+    
+    try:
+        await server.wait_for_termination()
+    except KeyboardInterrupt:
+        logger.info("Shutting down gRPC server...")
+        await server.stop(grace=5)
+        if db_client:
+            await db_client.close()
+        logger.info("gRPC server stopped")
+
+
+if __name__ == '__main__':
+    asyncio.run(serve())
