@@ -166,7 +166,7 @@ Invoke-RestMethod -Uri "http://localhost:8085/ai/chat/query" `
     -Body $body
 ```
 
-### gRPC API (Java 서비스 통해, 포트 8080)
+### gRPC API (Java 서비스 통해, 포트 8084)
 
 ```powershell
 $body = @{
@@ -174,7 +174,7 @@ $body = @{
     query = "최근 한 달 간 완료한 할 일이 어느 요일에 많아?"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/chat" `
+Invoke-RestMethod -Uri "http://localhost:8084/api/v1/chat" `
     -Method POST `
     -ContentType "application/json" `
     -Body $body

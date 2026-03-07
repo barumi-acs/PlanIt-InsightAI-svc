@@ -219,7 +219,7 @@ python test_grpc_client.py
 ```
 ┌─────────────────────────────────────┐
 │  Java Service (Client)              │
-│  Port: 8080                         │
+│  Port: 8084                         │
 │                                     │
 │  ┌──────────────────────────────┐  │
 │  │ ChatbotServiceGrpc.Stub      │  │

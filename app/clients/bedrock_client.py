@@ -12,7 +12,6 @@ from botocore.exceptions import ClientError
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 
 class BedrockClient:
@@ -25,6 +24,7 @@ class BedrockClient:
         2. ~/.aws/credentials 파일
         3. IAM Role (ECS/EKS)
         """
+        settings = get_settings()
         self.client = boto3.client(
             'bedrock-runtime',
             region_name=settings.aws_region,
@@ -59,6 +59,8 @@ class BedrockClient:
             Bedrock 응답 딕셔너리
         """
         try:
+            settings = get_settings()
+            
             # 기본값 설정
             if temperature is None:
                 temperature = settings.bedrock_temperature

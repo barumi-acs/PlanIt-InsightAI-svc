@@ -902,7 +902,7 @@ async def global_exception_handler(request, exc):
 
 ```yaml
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8084}
 
 spring:
   application:
@@ -910,7 +910,7 @@ spring:
   
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/insight_db}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/plainit_db}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:root}
   
@@ -964,12 +964,12 @@ BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 # Database (MCP Tool Use용)
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=insight_db
+DB_NAME=plainit_db
 DB_USER=root
 DB_PASSWORD=root
 
 # Service A 연동
-SERVICE_A_BASE_URL=http://localhost:8080
+SERVICE_A_BASE_URL=http://localhost:8084
 ```
 
 ### Service B: config.py
@@ -987,11 +987,11 @@ class Settings(BaseSettings):
     
     db_host: str = "localhost"
     db_port: int = 3306
-    db_name: str = "insight_db"
+    db_name: str = "plainit_db"
     db_user: str = "root"
     db_password: str = "root"
     
-    service_a_base_url: str = "http://localhost:8080"
+    service_a_base_url: str = "http://localhost:8084"
     
     class Config:
         env_file = ".env"
@@ -1365,7 +1365,7 @@ public class LoggingUtils {
 ```
 ┌─────────────────┐     ┌─────────────────┐
 │  Service A      │────▶│  Service B      │
-│  localhost:8080 │     │  localhost:8000 │
+│  localhost:8084 │     │  localhost:8000 │
 └────────┬────────┘     └────────┬────────┘
          │                       │
          ▼                       ▼

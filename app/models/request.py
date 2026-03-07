@@ -55,10 +55,13 @@ class StatsData(BaseModel):
 
 class ReportGenerationRequest(BaseModel):
     """리포트 생성 요청"""
-    user_id: str = Field(..., description="사용자 ID")
-    year_month: str = Field(..., description="년월 (YYYY-MM)")
-    week: int = Field(..., description="주차")
-    stats_data: StatsData = Field(..., description="통계 데이터")
+    user_id: str = Field(..., alias="userId", description="사용자 ID")
+    report_type: str = Field(..., alias="reportType", description="리포트 타입")
+    target_period: str = Field(..., alias="targetPeriod", description="대상 기간")
+    statistics_data: Dict = Field(..., alias="statisticsData", description="통계 데이터")
+    
+    class Config:
+        populate_by_name = True
 
 
 class ChatQueryRequest(BaseModel):

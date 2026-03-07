@@ -19,6 +19,8 @@ async def test_bedrock_connection():
     print("AWS Bedrock 연결 테스트 시작")
     print("=" * 60)
     
+    # 캐시 클리어 후 새로운 설정 로드
+    get_settings.cache_clear()
     settings = get_settings()
     print(f"\n[설정 정보]")
     print(f"AWS Region: {settings.aws_region}")

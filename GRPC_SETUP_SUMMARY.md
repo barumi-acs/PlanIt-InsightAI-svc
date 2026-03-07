@@ -166,7 +166,7 @@ grpcurl -plaintext -d '{
 
 | 서비스 | 프로토콜 | 포트 | 용도 |
 |--------|---------|------|------|
-| Java Service | HTTP | 8080 | REST API |
+| Java Service | HTTP | 8084 | REST API |
 | Python FastAPI | HTTP | 8085 | REST API |
 | Python gRPC | gRPC | 50051 | gRPC Server |
 | DynamoDB Local | HTTP | 8000 | NoSQL DB |
@@ -179,7 +179,7 @@ grpcurl -plaintext -d '{
 ```
 ┌──────────────────────────────────────────────┐
 │  Java Service (Client)                       │
-│  Port: 8080                                  │
+│  Port: 8084                                  │
 │                                              │
 │  ┌────────────────────────────────────────┐ │
 │  │ ChatbotServiceGrpc.Stub                │ │
