@@ -150,73 +150,68 @@ action_type 파라미터 사용법:
             }
         ]
         
-        system_prompt = f"""# 페르소나 및 역할
-당신은 사용자의 성장과 시간 관리를 돕는 'PlanIt' 서비스의 전문 AI 코치입니다.
+        system_prompt = f"""# 시스템 정보
 사용자 ID: {user_id}
 오늘 날짜: {datetime.now().strftime('%Y-%m-%d')}
 
-# 핵심 미션
-사용자의 할 일 관리, 생산성 향상, 목표 달성을 돕는 것이 당신의 유일한 목적입니다.
+# 역할
+당신은 PlanIt 서비스의 데이터 분석 AI 비서입니다. 사용자의 할 일 관리 데이터를 분석하여 정확한 인사이트를 제공합니다.
 
-# 도메인 제한 (매우 중요!)
-다음 주제에 대해서만 답변하세요:
-✅ 할 일(Task) 관리 및 완료 현황
-✅ 미룸 습관(Postpone) 분석 및 개선
-✅ 목표(Goal) 달성률 및 진척도
-✅ 생산성(Productivity) 패턴 분석
-✅ 시간 관리 및 요일별 성과
-✅ 완료율, 통계, 트렌드 분석
+# 응답 제약 조건 (절대 준수!)
 
-# Off-topic 질문 처리 (절대 규칙!)
-다음과 같은 서비스 도메인 외 질문이 들어오면 절대 답변하지 마세요:
-❌ 날씨, 뉴스, 시사
-❌ 코딩, 프로그래밍, 기술 질문
-❌ 일반 상식, 역사, 과학
-❌ 요리, 여행, 쇼핑
-❌ 수학 문제 풀이
-❌ 번역, 작문
-❌ 기타 PlanIt 서비스와 무관한 모든 질문
+## 1. Stateless 시스템 - 대화 유도 절대 금지
+이 시스템은 이전 대화 내역을 기억하지 않는 1회성 질의응답 시스템입니다.
+- 답변 마지막에 "~할까요?", "~원하시나요?", "~궁금하신가요?" 같은 추가 질문을 **절대** 작성하지 마세요
+- "더 알고 싶으시면", "다른 질문이 있으시면" 같은 대화 연장 유도 문구 금지
+- 질문에 대한 답변만 제공하고 즉시 종료하세요
 
-이런 질문이 들어오면 반드시 다음과 같이 정중히 거절하세요:
-"저는 할 일 관리와 생산성 향상을 돕는 PlanIt AI 코치입니다. 사용자의 목표 달성과 관련된 질문을 남겨주시면 최선을 다해 답변해 드릴게요! 😊
+## 2. 극강의 간결성
+- "데이터를 분석해봤어요", "결과를 말씀드릴게요" 같은 서론/인사말 제외
+- 핵심 결론과 근거 데이터만 3~4개의 간결한 문장으로 요약
+- 마크다운 포맷팅 최소화 (불릿 포인트만 허용)
+- 이모지 사용 최소화 (필요시 1~2개만)
+- 전체 답변 길이: 최대 150자 이내 권장
 
-예를 들어 이런 질문을 해보세요:
-• 지난 주에 가장 생산적이었던 요일은?
-• 이번 달 완료율은 얼마나 되나요?
-• 어느 요일에 할 일을 가장 많이 미루나요?
-• 최근 완료한 할 일을 보여주세요."
+## 3. 프로페셔널한 톤
+- 과도하게 친근한 어투 지양
+- 데이터 기반의 정확하고 객관적인 표현 사용
+- 전문 비서의 간결하고 명확한 어조 유지
 
-# 데이터 조회 도구 사용 규칙
-제공된 도구를 사용하여 데이터베이스에서 정보를 조회하고 분석하세요.
+# 도메인 제한
+다음 주제만 답변:
+- 할 일 완료/미룸 현황
+- 생산성 패턴 및 통계
+- 목표 달성률 분석
+- 요일별/시간대별 성과
 
-1. query_user_action_logs 도구 사용 시:
-   - action_type='COMPLETED': 완료한 할 일만 조회
-   - action_type='POSTPONED': 미룬 할 일만 조회
-   - action_type 없음: 모든 액션 조회
+도메인 외 질문 시:
+"PlanIt 할 일 관리 데이터 분석만 제공합니다."
 
-2. 사용자가 "완료를 많이 한 요일", "잘한 요일", "생산적인 요일" 등을 물으면:
-   - 반드시 action_type='COMPLETED'로 조회하세요
-   - 완료(COMPLETED) 횟수가 많은 요일을 찾으세요
-   - 미룸(POSTPONED) 데이터는 무시하세요
+# 데이터 조회 도구 사용
+1. query_user_action_logs:
+   - action_type='COMPLETED': 완료한 할 일만
+   - action_type='POSTPONED': 미룬 할 일만
+   - 생략: 전체 조회
 
-3. 사용자가 "미룬 요일", "못한 요일", "안 좋은 요일" 등을 물으면:
-   - 반드시 action_type='POSTPONED'로 조회하세요
-   - 미룸(POSTPONED) 횟수가 많은 요일을 찾으세요
+2. 완료/생산성 질문 → action_type='COMPLETED' 사용
+3. 미룸 질문 → action_type='POSTPONED' 사용
 
-4. 요일별 완료율을 물으면:
-   - 전체 로그를 조회하고
-   - 요일별로 (완료 수 / 전체 수) * 100을 계산하세요
+# 답변 형식 예시
+질문: "지난 주 어느 요일에 가장 많이 미뤘나요?"
+답변:
+"일요일 8건으로 가장 많이 미뤘습니다.
+- 토요일: 5건
+- 금요일: 3건
+주말에 미루는 경향이 있습니다."
 
-# 답변 스타일
-- 친근하고 격려하는 톤 사용
-- 구체적인 숫자와 데이터 기반 답변
-- 실행 가능한 조언 제공
-- 이모지 적절히 활용 (😊, 💪, 📊 등)"""
+(추가 질문이나 대화 유도 문구 없이 즉시 종료)"""
         
         sources = []
         max_iterations = 5  # 무한 루프 방지
         
         for iteration in range(max_iterations):
+            logger.info(f"[ChatbotService] Iteration {iteration + 1}/{max_iterations}")
+            
             # Bedrock Converse API 호출 (Tool Use 활성화)
             response = await self.bedrock.converse(
                 messages=messages,
@@ -226,42 +221,62 @@ action_type 파라미터 사용법:
                 max_tokens=2000
             )
             
+            stop_reason = response.get('stopReason')
+            logger.info(f"[ChatbotService] Stop reason: {stop_reason}")
+            
             # Tool Use 확인
-            if self.bedrock.has_tool_use(response):
-                # Tool 실행
-                tool_use = self.bedrock.extract_tool_use(response)
-                logger.info(f"Tool use detected: {tool_use['name']}")
+            if stop_reason == 'tool_use' or self.bedrock.has_tool_use(response):
+                logger.info(f"[ChatbotService] Tool use detected, processing...")
                 
-                # Tool 실행
-                tool_result = await self._execute_tool(
-                    tool_name=tool_use['name'],
-                    tool_input=tool_use['input'],
-                    user_id=user_id
-                )
-                
-                # 출처 기록
-                sources.append(f"{tool_use['name']} 실행")
-                
-                # 대화 컨텍스트에 추가
+                # Assistant의 응답(toolUse 포함)을 대화 컨텍스트에 추가
+                assistant_message = response['output']['message']
                 messages.append({
                     "role": "assistant",
-                    "content": response['output']['message']['content']
+                    "content": assistant_message['content']
                 })
                 
-                messages.append({
-                    "role": "user",
-                    "content": [
-                        {
+                # 모든 toolUse 블록 처리
+                tool_results = []
+                for content_block in assistant_message['content']:
+                    if 'toolUse' in content_block:
+                        tool_use = content_block['toolUse']
+                        tool_use_id = tool_use['toolUseId']
+                        tool_name = tool_use['name']
+                        tool_input = tool_use.get('input', {})
+                        
+                        logger.info(f"[ChatbotService] Executing tool: {tool_name}")
+                        logger.info(f"  Tool Use ID: {tool_use_id}")
+                        logger.info(f"  Tool Input: {tool_input}")
+                        
+                        # Tool 실행
+                        tool_result = await self._execute_tool(
+                            tool_name=tool_name,
+                            tool_input=tool_input,
+                            user_id=user_id
+                        )
+                        
+                        # 출처 기록
+                        sources.append(f"{tool_name} 실행")
+                        
+                        # toolResult 블록 생성 (Bedrock API 명세에 맞춤)
+                        tool_results.append({
                             "toolResult": {
-                                "toolUseId": tool_use['toolUseId'],
+                                "toolUseId": tool_use_id,
                                 "content": [
                                     {"json": tool_result}
                                 ]
                             }
-                        }
-                    ]
+                        })
+                
+                # User 역할로 toolResult 전달
+                messages.append({
+                    "role": "user",
+                    "content": tool_results
                 })
-            else:
+                
+                logger.info(f"[ChatbotService] Tool results added to context, continuing conversation...")
+                
+            elif stop_reason == 'end_turn':
                 # 최종 답변 생성
                 answer = self.bedrock.extract_text(response)
                 logger.info("-" * 80)
@@ -276,6 +291,23 @@ action_type 파라미터 사용법:
                     "sources": sources if sources else ["직접 답변"],
                     "generated_at": datetime.now().isoformat()
                 }
+            else:
+                # 예상치 못한 stopReason
+                logger.warning(f"[ChatbotService] Unexpected stop reason: {stop_reason}")
+                answer = self.bedrock.extract_text(response)
+                if answer:
+                    return {
+                        "answer": answer,
+                        "sources": sources if sources else ["직접 답변"],
+                        "generated_at": datetime.now().isoformat()
+                    }
+                else:
+                    logger.error(f"[ChatbotService] No text content in response with stop reason: {stop_reason}")
+                    return {
+                        "answer": "죄송합니다. 답변을 생성하는 중 문제가 발생했습니다.",
+                        "sources": sources,
+                        "generated_at": datetime.now().isoformat()
+                    }
         
         # 최대 반복 횟수 초과
         logger.warning("-" * 80)

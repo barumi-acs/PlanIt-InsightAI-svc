@@ -1,6 +1,7 @@
 """
-gRPC Server Entry Point
-Python gRPC 서버 실행 (Port 50051)
+gRPC Server Entry Point (Unified)
+Chatbot + Report 서비스를 하나의 포트(50051)에서 제공
+gRPC Multiplexing 활용
 
 Usage:
     python -m app.main_grpc
@@ -18,12 +19,15 @@ from concurrent import futures
 import grpc
 from grpc_reflection.v1alpha import reflection
 
-# gRPC generated code
+# Chatbot gRPC
 from app.grpc_generated import chat_service_pb2
 from app.grpc_generated import chat_service_pb2_grpc
-
-# Servicer implementation
 from app.grpc_server.chatbot_servicer import ChatbotServicer
+
+# Report gRPC
+from proto import report_service_pb2
+from proto import report_service_pb2_grpc
+from app.grpc_server.report_servicer import ReportServiceServicer
 
 # Database lifecycle
 from app.clients.database_client import DatabaseClient
@@ -42,9 +46,10 @@ logger = logging.getLogger(__name__)
 
 async def serve():
     """
-    gRPC 서버 실행
+    통합 gRPC 서버 실행 (Chatbot + Report)
     
-    - Port: 50051
+    - Port: 50051 (단일 포트)
+    - Services: ChatbotService, ReportService
     - Max Workers: 10
     - Reflection: Enabled (grpcurl 테스트용)
     """
@@ -67,39 +72,54 @@ async def serve():
         ]
     )
     
-    # Servicer 등록
+    # Chatbot Servicer 등록
     chatbot_servicer = ChatbotServicer()
     chat_service_pb2_grpc.add_ChatbotServiceServicer_to_server(
         chatbot_servicer, server
     )
+    logger.info("ChatbotService registered")
+    
+    # Report Servicer 등록
+    report_servicer = ReportServiceServicer()
+    report_service_pb2_grpc.add_ReportServiceServicer_to_server(
+        report_servicer, server
+    )
+    logger.info("ReportService registered")
     
     # Reflection 등록 (grpcurl 테스트용)
     SERVICE_NAMES = (
         chat_service_pb2.DESCRIPTOR.services_by_name['ChatbotService'].full_name,
+        report_service_pb2.DESCRIPTOR.services_by_name['ReportService'].full_name,
         reflection.SERVICE_NAME,
     )
     reflection.enable_server_reflection(SERVICE_NAMES, server)
     
-    # 서버 시작
+    # 서버 시작 (단일 포트 50051)
     listen_addr = f'[::]:{settings.grpc_port}'
     server.add_insecure_port(listen_addr)
     
-    logger.info(f"Starting gRPC server on {listen_addr}")
+    logger.info("=" * 60)
+    logger.info(f"Starting unified gRPC server on {listen_addr}")
+    logger.info("Services available:")
+    logger.info("  1. ChatbotService (chat.ChatbotService)")
+    logger.info("  2. ReportService (report.ReportService)")
     logger.info(f"AWS Region: {settings.aws_region}")
     logger.info(f"Bedrock Model: {settings.bedrock_model_id}")
     logger.info(f"Database: {settings.db_host}:{settings.db_port}/{settings.db_name}")
+    logger.info("=" * 60)
     
     await server.start()
-    logger.info("gRPC server started successfully")
+    logger.info("✓ Unified gRPC server started successfully")
+    logger.info(f"✓ Listening on port {settings.grpc_port}")
     
     try:
         await server.wait_for_termination()
     except KeyboardInterrupt:
-        logger.info("Shutting down gRPC server...")
+        logger.info("Shutting down unified gRPC server...")
         await server.stop(grace=5)
         if db_client:
             await db_client.close()
-        logger.info("gRPC server stopped")
+        logger.info("Unified gRPC server stopped")
 
 
 if __name__ == '__main__':
