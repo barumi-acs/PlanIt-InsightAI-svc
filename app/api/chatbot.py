@@ -1,5 +1,20 @@
 """
 챗봇 API 라우터
+
+⚠️ DEPRECATED: 이 REST API는 더 이상 사용되지 않습니다.
+프론트엔드는 Java BFF (Insight-svc)를 통해 챗봇 서비스를 이용해야 합니다.
+
+[새로운 아키텍처]
+FE → Insight-svc (Java BFF) → InsightAI-svc (Python gRPC)
+
+[마이그레이션 가이드]
+- 기존: POST http://localhost:8085/ai/chat/query
+- 신규: POST http://localhost:8084/api/v1/insight/chat/query
+
+이 엔드포인트는 하위 호환성을 위해 유지되지만,
+향후 버전에서 제거될 예정입니다.
+
+@deprecated 2026-03-08
 """
 import logging
 from fastapi import APIRouter, HTTPException
@@ -12,7 +27,7 @@ from app.services.chatbot import ChatbotService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/ai/chat", tags=["Chatbot"])
+router = APIRouter(prefix="/ai/chat", tags=["Chatbot (Deprecated)"])
 
 # 싱글톤 인스턴스
 bedrock_client = BedrockClient()
@@ -28,13 +43,23 @@ async def get_chatbot_service():
     return chatbot_service
 
 
-@router.post("/query", response_model=ChatQueryResponse)
+@router.post("/query", response_model=ChatQueryResponse, deprecated=True)
 async def query_chatbot(request: ChatQueryRequest):
     """
-    챗봇 질의 API (Bedrock Tool Use 방식)
+    챗봇 질의 API (DEPRECATED)
     
-    Claude가 자율적으로 데이터베이스를 조회하여 답변 생성
+    ⚠️ 이 엔드포인트는 더 이상 사용되지 않습니다.
+    Java BFF (Insight-svc)의 /api/v1/insight/chat/query를 사용하세요.
+    
+    [마이그레이션]
+    - 기존: POST http://localhost:8085/ai/chat/query
+    - 신규: POST http://localhost:8084/api/v1/insight/chat/query
+    
+    @deprecated 2026-03-08
     """
+    logger.warning("[DEPRECATED] Direct REST API call detected. "
+                   "Please migrate to Java BFF: /api/v1/insight/chat/query")
+    
     try:
         logger.info(f"Chatbot query requested: user={request.user_id}, query={request.query}")
         
