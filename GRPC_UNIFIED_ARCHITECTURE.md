@@ -1,14 +1,14 @@
 # gRPC 통합 아키텍처 가이드
 
 ## 개요
-InsightAI-svc는 단일 포트(50051)에서 gRPC Multiplexing을 활용하여 여러 서비스를 제공합니다.
+InsightAI-svc는 단일 포트(9095)에서 gRPC Multiplexing을 활용하여 여러 서비스를 제공합니다.
 
 ## 아키텍처 원칙
 
 ### ✅ 채택: 단일 포트 통합 (gRPC Multiplexing)
 ```
 InsightAI-svc (Python)
-Port: 50051 (단일 포트)
+Port: 9095 (단일 포트)
 ┌─────────────────────────────────┐
 │   gRPC Server (Multiplexing)    │
 │                                  │
@@ -27,7 +27,7 @@ Port: 50051 (단일 포트)
 
 ### ❌ 기각: 포트 분리 (안티 패턴)
 ```
-❌ ChatbotService  → Port 50051
+❌ ChatbotService  → Port 9095
 ❌ ReportService   → Port 50052
 ```
 
@@ -43,7 +43,7 @@ Port: 50051 (단일 포트)
 ```python
 """
 통합 gRPC 서버 (Chatbot + Report)
-Port: 50051 (단일 포트)
+Port: 9095 (단일 포트)
 """
 
 import grpc
@@ -70,8 +70,8 @@ async def serve():
         ReportServiceServicer(), server
     )
     
-    # 단일 포트 50051
-    server.add_insecure_port('[::]50051')
+    # 단일 포트 9095
+    server.add_insecure_port('[::]9095')
     await server.start()
 ```
 
@@ -86,7 +86,7 @@ python -m app.main_grpc
 **로그 출력**:
 ```
 ============================================================
-Starting unified gRPC server on [::]:50051
+Starting unified gRPC server on [::]:9095
 Services available:
   1. ChatbotService (chat.ChatbotService)
   2. ReportService (report.ReportService)
@@ -95,7 +95,7 @@ Bedrock Model: global.anthropic.claude-sonnet-4-5-20250929-v1:0
 Database: localhost:3306/planit_insight_db
 ============================================================
 ✓ Unified gRPC server started successfully
-✓ Listening on port 50051
+✓ Listening on port 9095
 ```
 
 ## Java 클라이언트 설정
@@ -107,7 +107,7 @@ grpc:
   client:
     # Chatbot 서비스
     chat-service:
-      address: 'static://localhost:50051'
+      address: 'static://localhost:9095'
       negotiationType: plaintext
       enableKeepAlive: true
       keepAliveTime: 30s
@@ -115,7 +115,7 @@ grpc:
     
     # Report 서비스 (동일 포트)
     report-service:
-      address: 'static://localhost:50051'
+      address: 'static://localhost:9095'
       negotiationType: plaintext
       enableKeepAlive: true
       keepAliveTime: 30s
@@ -140,7 +140,7 @@ private ReportServiceGrpc.ReportServiceBlockingStub reportStub;
 
 ```
 Client (Java)                    Server (Python)
-                                 Port: 50051
+                                 Port: 9095
 ┌──────────────┐                ┌──────────────┐
 │ ChatClient   │───Stream 1────>│ ChatServicer │
 └──────────────┘                └──────────────┘
@@ -149,7 +149,7 @@ Client (Java)                    Server (Python)
 │ ReportClient │───Stream 2────>│ReportServicer│
 └──────────────┘                └──────────────┘
 
-        동일 TCP 연결 (Port 50051)
+        동일 TCP 연결 (Port 9095)
 ```
 
 ### 서비스 구분 방법
@@ -170,7 +170,7 @@ python -m app.main_grpc
 ### 2. 서비스 목록 확인 (grpcurl)
 
 ```powershell
-grpcurl -plaintext localhost:50051 list
+grpcurl -plaintext localhost:9095 list
 ```
 
 **출력**:
@@ -186,7 +186,7 @@ report.ReportService
 grpcurl -plaintext -d '{
   "user_id": "test-user",
   "message": "안녕하세요"
-}' localhost:50051 chat.ChatbotService/SendMessage
+}' localhost:9095 chat.ChatbotService/SendMessage
 ```
 
 ### 4. Report 서비스 테스트
@@ -197,7 +197,7 @@ grpcurl -plaintext -d '{
   "report_type": "GROWTH",
   "target_period": "2026-02",
   "statistics_data": "{\"topicName\":\"운동\",\"growthRate\":25}"
-}' localhost:50051 report.ReportService/GenerateReport
+}' localhost:9095 report.ReportService/GenerateReport
 ```
 
 ### 5. Java 통합 테스트
@@ -218,7 +218,7 @@ Invoke-WebRequest -Uri "http://localhost:8084/api/v1/batch/generate-report?userI
 | Schedule-svc | HTTP | 8083 | REST API |
 | Insight-svc | HTTP | 8084 | REST API |
 | Insight-svc | gRPC | 9090 | ActionLog 서버 |
-| InsightAI-svc | gRPC | 50051 | Chatbot + Report (통합) |
+| InsightAI-svc | gRPC | 9095 | Chatbot + Report (통합) |
 | InsightAI-svc | HTTP | 8085 | FastAPI (Deprecated) |
 
 ## 마이그레이션 체크리스트

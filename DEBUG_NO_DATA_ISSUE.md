@@ -81,7 +81,7 @@ Invoke-RestMethod -Uri "http://localhost:8085/ai/chat/query" `
     -Body $body
 ```
 
-#### gRPC API 테스트 (포트 50051)
+#### gRPC API 테스트 (포트 9095)
 
 Java 서비스를 통해 테스트:
 
