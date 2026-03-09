@@ -139,7 +139,7 @@ BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=plainit_db
+DB_NAME=planit_insight_db
 DB_USER=root
 DB_PASSWORD=root
 

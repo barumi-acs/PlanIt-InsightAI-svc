@@ -1,7 +1,7 @@
 -- 챗봇 테스트를 위한 풍부한 테스트 데이터
--- plainit_db.user_action_logs 테이블에 삽입
+-- planit_insight_db.user_action_logs 테이블에 삽입
 
-USE plainit_db;
+USE planit_insight_db;
 
 -- 기존 테스트 데이터 삭제 (선택)
 -- DELETE FROM user_action_logs WHERE user_id = 'test-user-001';
