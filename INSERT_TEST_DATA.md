@@ -22,7 +22,7 @@
 mysql -u root -p
 
 # 데이터베이스 선택
-USE plainit_db;
+USE planit_insight_db;
 
 # SQL 파일 실행
 source C:/workspace/PlanIt/PlanIt-InsightAI-svc/test-data-chatbot.sql
@@ -35,7 +35,7 @@ source C:/workspace/PlanIt/PlanIt-InsightAI-svc/test-data-chatbot.sql
 $sqlFile = "C:\workspace\PlanIt\PlanIt-InsightAI-svc\test-data-chatbot.sql"
 
 # MySQL 실행
-mysql -u root -p plainit_db < $sqlFile
+mysql -u root -p planit_insight_db < $sqlFile
 ```
 
 ### 방법 3: MySQL Workbench 사용

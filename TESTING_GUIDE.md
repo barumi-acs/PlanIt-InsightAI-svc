@@ -130,7 +130,7 @@ docker run -d `
   -e AWS_SECRET_ACCESS_KEY=$env:AWS_SECRET_ACCESS_KEY `
   -e DB_HOST=host.docker.internal `
   -e DB_PORT=3306 `
-  -e DB_NAME=plainit_db `
+  -e DB_NAME=planit_insight_db `
   -e DB_USER=root `
   -e DB_PASSWORD=root `
   planit-insightai-svc:latest
@@ -204,7 +204,7 @@ DB 설정 확인 (.env 파일):
 ```env
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=plainit_db
+DB_NAME=planit_insight_db
 DB_USER=root
 DB_PASSWORD=root
 ```

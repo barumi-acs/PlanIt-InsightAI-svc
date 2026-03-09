@@ -92,7 +92,7 @@ Services available:
   2. ReportService (report.ReportService)
 AWS Region: us-east-1
 Bedrock Model: global.anthropic.claude-sonnet-4-5-20250929-v1:0
-Database: localhost:3306/plainit_db
+Database: localhost:3306/planit_insight_db
 ============================================================
 ✓ Unified gRPC server started successfully
 ✓ Listening on port 50051

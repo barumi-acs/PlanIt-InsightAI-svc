@@ -102,7 +102,7 @@ BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 # Database
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=plainit_db
+DB_NAME=planit_insight_db
 DB_USER=root
 DB_PASSWORD=root
 
@@ -122,7 +122,7 @@ python -m app.main_grpc
 2026-03-05 20:57:00,000 - __main__ - INFO - Starting gRPC server on [::]:50051
 2026-03-05 20:57:00,001 - __main__ - INFO - AWS Region: us-east-1
 2026-03-05 20:57:00,002 - __main__ - INFO - Bedrock Model: anthropic.claude-3-sonnet-20240229-v1:0
-2026-03-05 20:57:00,003 - __main__ - INFO - Database: localhost:3306/plainit_db
+2026-03-05 20:57:00,003 - __main__ - INFO - Database: localhost:3306/planit_insight_db
 2026-03-05 20:57:00,100 - __main__ - INFO - Database connection pool initialized
 2026-03-05 20:57:00,101 - __main__ - INFO - gRPC server started successfully
 ```
@@ -347,7 +347,7 @@ lsof -i :50051
 mysql -u root -p
 
 # 테스트 데이터 확인
-USE plainit_db;
+USE planit_insight_db;
 SELECT COUNT(*) FROM action_logs WHERE user_id = 'test-user-001';
 ```
 

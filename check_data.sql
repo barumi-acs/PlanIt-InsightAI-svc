@@ -1,6 +1,6 @@
 -- 데이터 확인 쿼리
 
-USE plainit_db;
+USE planit_insight_db;
 
 -- 1. 테이블 존재 확인
 SHOW TABLES LIKE 'user_action_logs';
