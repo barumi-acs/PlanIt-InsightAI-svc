@@ -10,7 +10,7 @@ if __name__ == "__main__":
     print("PlanIt-InsightAI Service - Starting gRPC Server")
     print("=" * 60)
     print()
-    print("[INFO] gRPC Server will start on port 50051")
+    print("[INFO] gRPC Server will start on port 9095")
     print("[INFO] This service is called by Insight-svc (Java)")
     print()
     

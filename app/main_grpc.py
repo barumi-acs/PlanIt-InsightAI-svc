@@ -1,6 +1,6 @@
 """
 gRPC Server Entry Point (Unified)
-Chatbot + Report 서비스를 하나의 포트(50051)에서 제공
+Chatbot + Report 서비스를 하나의 포트(9095)에서 제공
 gRPC Multiplexing 활용
 
 Usage:
@@ -48,7 +48,7 @@ async def serve():
     """
     통합 gRPC 서버 실행 (Chatbot + Report)
     
-    - Port: 50051 (단일 포트)
+    - Port: 9095 (단일 포트)
     - Services: ChatbotService, ReportService
     - Max Workers: 10
     - Reflection: Enabled (grpcurl 테스트용)
@@ -94,7 +94,7 @@ async def serve():
     )
     reflection.enable_server_reflection(SERVICE_NAMES, server)
     
-    # 서버 시작 (단일 포트 50051)
+    # 서버 시작 (단일 포트 9095)
     listen_addr = f'[::]:{settings.grpc_port}'
     server.add_insecure_port(listen_addr)
     

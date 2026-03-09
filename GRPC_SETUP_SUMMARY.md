@@ -105,7 +105,7 @@ PlanIt-InsightAI-svc/
 
 #### gRPC 서버 구현 완료
 **파일**: `app/main_grpc.py`
-- Port 50051에서 실행
+- Port 9095에서 실행
 - Reflection 활성화 (grpcurl 테스트용)
 - Database 연결 풀 관리
 - 우아한 종료 (Graceful Shutdown)
@@ -143,7 +143,7 @@ DB_NAME=planit_insight_db
 DB_USER=root
 DB_PASSWORD=root
 
-GRPC_PORT=50051
+GRPC_PORT=9095
 ```
 
 ### Step 4: gRPC 서버 실행
@@ -157,7 +157,7 @@ python -m app.main_grpc
 grpcurl -plaintext -d '{
   "user_id": "test-user-001",
   "query": "지난주에 할 일을 가장 많이 완료한 요일은?"
-}' localhost:50051 com.planit.analytics.grpc.ChatbotService/QueryChatbot
+}' localhost:9095 com.planit.analytics.grpc.ChatbotService/QueryChatbot
 ```
 
 ---
@@ -168,7 +168,7 @@ grpcurl -plaintext -d '{
 |--------|---------|------|------|
 | Java Service | HTTP | 8084 | REST API |
 | Python FastAPI | HTTP | 8085 | REST API |
-| Python gRPC | gRPC | 50051 | gRPC Server |
+| Python gRPC | gRPC | 9095 | gRPC Server |
 | DynamoDB Local | HTTP | 8000 | NoSQL DB |
 | MariaDB | MySQL | 3306 | RDBMS |
 
@@ -189,12 +189,12 @@ grpcurl -plaintext -d '{
                       │
                       │ gRPC (HTTP/2)
                       │ Protobuf Binary
-                      │ Port: 50051
+                      │ Port: 9095
                       │
                       ↓
 ┌──────────────────────────────────────────────┐
 │  Python Service (Server)                     │
-│  Port: 50051 (gRPC), 8085 (FastAPI)         │
+│  Port: 9095 (gRPC), 8085 (FastAPI)         │
 │                                              │
 │  ┌────────────────────────────────────────┐ │
 │  │ ChatbotServicer                        │ │

@@ -39,14 +39,14 @@ PlanIt-InsightAI-svc/
 
 ### 5. ✅ gRPC 서버 구현
 **파일**: `app/main_grpc.py`
-- Port 50051에서 gRPC 서버 실행
+- Port 9095에서 gRPC 서버 실행
 - Reflection 활성화 (grpcurl 테스트용)
 - Database 연결 풀 관리
 - 비동기 서버 (grpc.aio)
 
 ### 6. ✅ Config 업데이트
 **파일**: `app/core/config.py`
-- `grpc_port: int = 50051` 추가
+- `grpc_port: int = 9095` 추가
 
 ---
 
@@ -108,18 +108,18 @@ DB_PASSWORD=root
 
 # Server
 PORT=8085
-GRPC_PORT=50051
+GRPC_PORT=9095
 ```
 
 ### Step 4: gRPC 서버 실행
 ```bash
-# gRPC 서버 실행 (Port 50051)
+# gRPC 서버 실행 (Port 9095)
 python -m app.main_grpc
 ```
 
 **예상 로그**:
 ```
-2026-03-05 20:57:00,000 - __main__ - INFO - Starting gRPC server on [::]:50051
+2026-03-05 20:57:00,000 - __main__ - INFO - Starting gRPC server on [::]:9095
 2026-03-05 20:57:00,001 - __main__ - INFO - AWS Region: us-east-1
 2026-03-05 20:57:00,002 - __main__ - INFO - Bedrock Model: anthropic.claude-3-sonnet-20240229-v1:0
 2026-03-05 20:57:00,003 - __main__ - INFO - Database: localhost:3306/planit_insight_db
@@ -142,7 +142,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8085 --reload
 
 #### 서비스 목록 조회
 ```bash
-grpcurl -plaintext localhost:50051 list
+grpcurl -plaintext localhost:9095 list
 ```
 
 **예상 출력**:
@@ -153,7 +153,7 @@ grpc.reflection.v1alpha.ServerReflection
 
 #### 메서드 상세 조회
 ```bash
-grpcurl -plaintext localhost:50051 describe com.planit.analytics.grpc.ChatbotService
+grpcurl -plaintext localhost:9095 describe com.planit.analytics.grpc.ChatbotService
 ```
 
 #### QueryChatbot 호출
@@ -161,7 +161,7 @@ grpcurl -plaintext localhost:50051 describe com.planit.analytics.grpc.ChatbotSer
 grpcurl -plaintext -d '{
   "user_id": "test-user-001",
   "query": "지난주에 할 일을 가장 많이 완료한 요일은?"
-}' localhost:50051 com.planit.analytics.grpc.ChatbotService/QueryChatbot
+}' localhost:9095 com.planit.analytics.grpc.ChatbotService/QueryChatbot
 ```
 
 **예상 응답**:
@@ -187,7 +187,7 @@ from app.grpc_generated import chat_service_pb2_grpc
 
 
 async def test_query_chatbot():
-    async with grpc.aio.insecure_channel('localhost:50051') as channel:
+    async with grpc.aio.insecure_channel('localhost:9095') as channel:
         stub = chat_service_pb2_grpc.ChatbotServiceStub(channel)
         
         request = chat_service_pb2.ChatRequest(
@@ -227,11 +227,11 @@ python test_grpc_client.py
 │  └──────────────┬───────────────┘  │
 └─────────────────┼───────────────────┘
                   │ gRPC (HTTP/2)
-                  │ Port: 50051
+                  │ Port: 9095
                   ↓
 ┌─────────────────────────────────────┐
 │  Python Service (Server)            │
-│  Port: 50051 (gRPC)                 │
+│  Port: 9095 (gRPC)                 │
 │  Port: 8085 (FastAPI)               │
 │                                     │
 │  ┌──────────────────────────────┐  │
@@ -333,10 +333,10 @@ from app.grpc_generated import chat_service_pb2_grpc
 ### 문제 3: 포트 충돌
 ```bash
 # Windows
-netstat -ano | findstr :50051
+netstat -ano | findstr :9095
 
 # Linux/Mac
-lsof -i :50051
+lsof -i :9095
 
 # 프로세스 종료 후 재시작
 ```
