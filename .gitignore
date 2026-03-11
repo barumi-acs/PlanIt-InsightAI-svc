@@ -1,12 +1,15 @@
-# Python
+# ─── Python 캐시 ──────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyd
 .Python
+
+# ─── 빌드 / 배포 산출물 ───────────────────────────────
 build/
-develop-eggs/
 dist/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -19,38 +22,56 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Virtual Environment
+# ─── 가상 환경 ─────────────────────────────────────────
 venv/
 ENV/
 env/
-.venv
+.venv/
+.env.bak
 
-# Environment Variables
-.env
-.env.local
-.env.*.local
-
-# IDE
+# ─── IDE ──────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Testing
+# ─── 테스트 / 커버리지 ────────────────────────────────
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 .tox/
+.nox/
+junit.xml
+test-results/
 
-# Logs
+# ─── 로그 ─────────────────────────────────────────────
 *.log
 logs/
 
-# OS
+# ─── OS ───────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# AWS
-.aws/
+# ─── 임시 파일 ────────────────────────────────────────
+*.tmp
+*.bak
+/tmp/
+
+# ─── mypy / pyright ───────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# ─── 환경 변수 (절대 커밋 금지) ───────────────────────
+.env
+.env.local
+.env.*.local

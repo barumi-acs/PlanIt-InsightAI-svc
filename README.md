@@ -1,17 +1,133 @@
 # PlanIt-InsightAI-svc
 
-AWS Bedrock Claude Sonnet 4.5를 활용한 AI 리포트 생성 및 챗봇 서비스
+AWS Bedrock(Claude)을 활용한 AI 리포트 생성 및 챗봇 서비스입니다.  
+Python FastAPI + gRPC 서버로 동작하며, Insight-svc(Java)로부터 요청을 받아 AI 분석 결과를 반환합니다.
 
-## 📋 개요
+---
 
-PlanIt-InsightAI-svc는 할 일 관리 앱의 사용자 데이터를 분석하여 AI 기반 인사이트를 제공하는 Python FastAPI 서비스입니다.
+## 서비스 개요
 
-### 주요 기능
+| 항목 | 내용 |
+|------|------|
+| 역할 | AI 리포트 생성, AI 챗봇 (Bedrock Claude 호출) |
+| HTTP 포트 | **8085** |
+| gRPC 포트 | **9095** |
+| 외부 의존 | AWS Bedrock, MariaDB (챗봇 Tool Use용) |
 
-1. **리포트 생성 (Context Injection)**
-   - Java 서비스가 조회한 통계 데이터를 받아 AI 피드백 생성
-   - Prompt Chaining 기법으로 일관성 있는 피드백 제공
-   - 성장, 타임라인, 패턴, 요약 4가지 피드백 생성
+> **중요**: HTTP 서버와 gRPC 서버를 **별도 프로세스로** 각각 실행해야 합니다.
+
+---
+
+## 기술 스택
+
+| 분류 | 기술 |
+|------|------|
+| 언어 / 프레임워크 | Python 3.11+, FastAPI 0.115 |
+| ASGI 서버 | Uvicorn |
+| AI | AWS Bedrock (Claude Sonnet 4.5) |
+| RPC | gRPC (grpcio 1.78) |
+| DB | aiomysql (비동기 MariaDB, 챗봇 Tool Use용) |
+| 설정 관리 | pydantic-settings, python-dotenv |
+
+---
+
+## 주요 기능
+
+- **리포트 생성**: Insight-svc가 조회한 통계 데이터 수신 → Prompt Chaining으로 성장/타임라인/패턴/요약 피드백 생성
+- **챗봇**: 사용자 자연어 질의 수신 → Claude Tool Use로 MariaDB 자율 조회 → 심층 분석 응답
+
+---
+
+## 실행 전 필요 조건
+
+1. Python 3.11 이상
+2. AWS Bedrock 접근 권한 (Claude 모델 활성화 필요, **리전: us-east-1**)
+3. MariaDB 실행 중 (챗봇 Tool Use용, `planit_schedule_db` 조회)
+4. `.env` 파일 설정
+
+---
+
+## 환경 변수 설정
+
+루트에 `.env` 파일 생성:
+
+```env
+# AWS Bedrock
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-5-20250929-v1:0
+
+# MariaDB (챗봇 Tool Use)
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=planit_schedule_db
+DB_USER=root
+DB_PASSWORD=root
+
+# 포트
+PORT=8085
+GRPC_PORT=9095
+
+# Insight-svc 주소 (챗봇 콜백용)
+SERVICE_A_BASE_URL=http://localhost:8084
+```
+
+---
+
+## 설치 및 실행 방법
+
+```bash
+# 1. 의존성 설치
+pip install -r requirements.txt
+
+# 2-A. HTTP 서버 실행 (포트 8085)
+uvicorn app.main:app --host 0.0.0.0 --port 8085 --reload
+
+# 2-B. gRPC 서버 실행 (포트 9095) — 별도 터미널에서 실행
+python -m app.main_grpc
+```
+
+---
+
+## Proto 재컴파일 (proto 파일 변경 시)
+
+```bash
+./compile_proto.sh
+```
+
+---
+
+## 테스트 실행
+
+```bash
+pytest tests/ -v
+```
+
+---
+
+## 프로젝트 구조
+
+```
+app/
+├── api/
+│   ├── reports.py       # HTTP: 리포트 생성 API
+│   └── chatbot.py       # HTTP: 챗봇 API
+├── clients/
+│   ├── bedrock_client.py    # AWS Bedrock 클라이언트
+│   └── database_client.py   # MariaDB 클라이언트 (Tool Use)
+├── core/
+│   └── config.py        # 환경 변수 설정
+├── grpc_server/         # gRPC 서버 구현
+├── services/
+│   ├── report_generator.py  # 리포트 생성 서비스
+│   └── chatbot_service.py   # 챗봇 서비스
+├── main.py              # FastAPI HTTP 서버 진입점
+└── main_grpc.py         # gRPC 서버 진입점
+proto/
+├── chat_service.proto   # 챗봇 gRPC 스펙
+└── report_service.proto # 리포트 gRPC 스펙
+```
 
 2. **챗봇 (Bedrock Tool Use)**
    - 사용자의 자연어 질의를 받아 Claude가 자율적으로 데이터 조회
