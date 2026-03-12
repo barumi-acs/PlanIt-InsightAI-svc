@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     port: int = 8085
-    grpc_port: int = 50051
+    grpc_port: int = 9095
     log_level: str = "INFO"
     environment: str = "development"
     
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # MariaDB 설정
     db_host: str = "localhost"
     db_port: int = 3306
-    db_name: str = "plainit_db"
+    db_name: str = "planit_insight_db"
     db_user: str = "root"
     db_password: str = "root"
     db_pool_size: int = 5
