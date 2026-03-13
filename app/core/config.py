@@ -15,14 +15,14 @@ class Settings(BaseSettings):
     bedrock_timeout: int = 30
     
     # MariaDB 설정
-    db_host: str = "localhost"
+    db_host: str = "planit-mariadb"
     db_port: int = 3306
     db_name: str = "planit_insight_db"
     db_user: str = "root"
     db_password: str = "root"
     db_pool_size: int = 5
     db_query_timeout: int = 10
-    service_a_base_url: str = "http://localhost:8084"
+    service_a_base_url: str = "http://planit-insight-svc:8084"
     
     # AWS Credentials (optional, can be loaded from .env or IAM Role)
     aws_access_key_id: str | None = None

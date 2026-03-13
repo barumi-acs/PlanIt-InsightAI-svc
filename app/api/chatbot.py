@@ -8,8 +8,8 @@
 FE → Insight-svc (Java BFF) → InsightAI-svc (Python gRPC)
 
 [마이그레이션 가이드]
-- 기존: POST http://localhost:8085/ai/chat/query
-- 신규: POST http://localhost:8084/api/v1/insight/chat/query
+- 기존: POST http://$PLANIT_INSIGHT_AI_SERVICE_HOST:8085/ai/chat/query
+- 신규: POST http://$PLANIT_INSIGHT_SERVICE_HOST:8084/api/v1/insight/chat/query
 
 이 엔드포인트는 하위 호환성을 위해 유지되지만,
 향후 버전에서 제거될 예정입니다.
@@ -52,8 +52,8 @@ async def query_chatbot(request: ChatQueryRequest):
     Java BFF (Insight-svc)의 /api/v1/insight/chat/query를 사용하세요.
     
     [마이그레이션]
-    - 기존: POST http://localhost:8085/ai/chat/query
-    - 신규: POST http://localhost:8084/api/v1/insight/chat/query
+    - 기존: POST http://$PLANIT_INSIGHT_AI_SERVICE_HOST:8085/ai/chat/query
+    - 신규: POST http://$PLANIT_INSIGHT_SERVICE_HOST:8084/api/v1/insight/chat/query
     
     @deprecated 2026-03-08
     """
