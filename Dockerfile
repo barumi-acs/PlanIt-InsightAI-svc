@@ -1,44 +1,37 @@
-# Multi-stage build for optimized image size
+# Multi-stage build for runtime image size and non-root execution
 FROM python:3.11-slim as builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	gcc \
+	&& rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+RUN python -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-
-# Final stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
+ENV PYTHONUNBUFFERED=1
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH=/opt/venv/bin:$PATH
+ENV PORT=8085
+ENV GRPC_PORT=9095
+ENV APP_MODE=http
 
-# Copy application code
+COPY --from=builder /opt/venv /opt/venv
 COPY ./app ./app
+COPY ./proto ./proto
 
-# Create non-root user for security
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app /opt/venv
 USER appuser
 
-# Add local Python packages to PATH
-ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8085
+EXPOSE 8085 9095
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8085/health')"
+CMD ["sh", "-c", "if [ \"$APP_MODE\" = \"grpc\" ]; then python -m app.main_grpc; else python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8085}; fi"]
 
-# Expose port
-EXPOSE 8085
-
-# Run application
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8085"]
