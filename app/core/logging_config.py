@@ -95,6 +95,11 @@ def setup_logging(log_level: str = "INFO"):
         logger.handlers = []
         logger.addHandler(json_handler)
         logger.propagate = False
+    
+    # boto3/botocore 로그 레벨 조정 (너무 많은 DEBUG 로그 억제)
+    logging.getLogger('boto3').setLevel(logging.WARNING)
+    logging.getLogger('botocore').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 def log_with_data(logger: logging.Logger, level: str, message: str, **data):
