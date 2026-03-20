@@ -132,7 +132,6 @@ action_type 파라미터 사용법:
         """
         import time
         log_with_data(logger, 'info', '챗봇 추론 시작', user_id=user_id, query_len=len(query))
-        logger.debug("[insightAI] 챗봇 질의 내용 | user_id=%s, query=%s", user_id, query)
         
         start = time.perf_counter()
         
@@ -229,8 +228,6 @@ action_type 파라미터 사용법:
         max_iterations = 5  # 무한 루프 방지
         
         for iteration in range(max_iterations):
-            logger.debug("[insightAI] Bedrock 호출 | user_id=%s, iteration=%d/%d", user_id, iteration + 1, max_iterations)
-            
             # Bedrock Converse API 호출 (Tool Use 활성화)
             response = await self.bedrock.converse(
                 messages=messages,
@@ -241,12 +238,9 @@ action_type 파라미터 사용법:
             )
             
             stop_reason = response.get('stopReason')
-            logger.debug("[insightAI] Bedrock 응답 수신 | stop_reason=%s", stop_reason)
             
             # Tool Use 확인
             if stop_reason == 'tool_use' or self.bedrock.has_tool_use(response):
-                logger.debug("[insightAI] Tool Use 감지 | user_id=%s", user_id)
-                
                 # Assistant의 응답(toolUse 포함)을 대화 컨텍스트에 추가
                 assistant_message = response['output']['message']
                 messages.append({
@@ -263,8 +257,8 @@ action_type 파라미터 사용법:
                         tool_name = tool_use['name']
                         tool_input = tool_use.get('input', {})
                         
-                        logger.info("[insightAI] Tool 실행 시작 | tool=%s, user_id=%s", tool_name, user_id)
-                        logger.debug("[insightAI] Tool 입력 파라미터 | tool=%s, input=%s", tool_name, tool_input)
+                        log_with_data(logger, 'info', 'Tool 실행 시작',
+                                      tool=tool_name, user_id=user_id)
                         
                         # Tool 실행
                         tool_result = await self._execute_tool(
@@ -308,7 +302,8 @@ action_type 파라미터 사용법:
                 }
             else:
                 # 예상치 못한 stopReason
-                logger.warning("[insightAI] 예상치 못한 stop_reason | user_id=%s, stop_reason=%s", user_id, stop_reason)
+                log_with_data(logger, 'warning', '예상치 못한 stop_reason',
+                              user_id=user_id, stop_reason=stop_reason)
                 answer = self.bedrock.extract_text(response)
                 if answer:
                     return {
@@ -317,7 +312,8 @@ action_type 파라미터 사용법:
                         "generated_at": datetime.now().isoformat()
                     }
                 else:
-                    logger.error("[insightAI] 응답 텍스트 없음 | user_id=%s, stop_reason=%s", user_id, stop_reason)
+                    log_with_data(logger, 'error', '응답 텍스트 없음',
+                                  user_id=user_id, stop_reason=stop_reason)
                     return {
                         "answer": "죄송합니다. 답변을 생성하는 중 문제가 발생했습니다.",
                         "sources": sources,
@@ -347,10 +343,6 @@ action_type 파라미터 사용법:
         
         try:
             if tool_name == "query_user_action_logs":
-                logger.debug("[insightAI] action_logs 조회 | user_id=%s, start=%s, end=%s, action_type=%s",
-                             user_id, tool_input['start_date'], tool_input['end_date'],
-                             tool_input.get('action_type', 'ALL'))
-                
                 results = await self.db.query_action_logs(
                     user_id=user_id,
                     start_date=tool_input['start_date'],
@@ -447,15 +439,16 @@ action_type 파라미터 사용법:
                 }
             
             else:
-                logger.error("[insightAI] 알 수 없는 Tool 요청 | tool=%s", tool_name)
+                log_with_data(logger, 'error', '알 수 없는 Tool 요청',
+                              tool=tool_name, user_id=user_id)
                 return {
                     "success": False,
                     "error": f"알 수 없는 도구: {tool_name}"
                 }
         
         except Exception as e:
-            logger.error("[insightAI] Tool 실행 실패 | tool=%s, user_id=%s, error=%s",
-                         tool_name, user_id, str(e), exc_info=True)
+            log_with_data(logger, 'error', 'Tool 실행 실패',
+                          tool=tool_name, user_id=user_id, error=str(e))
             return {
                 "success": False,
                 "error": str(e)
@@ -463,4 +456,5 @@ action_type 파라미터 사용법:
         
         finally:
             duration_ms = int((time.perf_counter() - start) * 1000)
-            logger.debug("[insightAI] Tool 실행 종료 | tool=%s, duration_ms=%d", tool_name, duration_ms)
+            log_with_data(logger, 'debug', 'Tool 실행 종료',
+                          tool=tool_name, duration_ms=duration_ms)

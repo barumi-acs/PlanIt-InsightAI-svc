@@ -10,6 +10,7 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from app.core.config import get_settings
+from app.core.logging_config import log_with_data
 
 logger = logging.getLogger(__name__)
 
@@ -85,31 +86,37 @@ class BedrockClient:
             if tools:
                 request_params["toolConfig"] = {"tools": tools}
             
-            logger.info(f"[Bedrock] Calling Converse API")
-            logger.info(f"  Model: {self.model_id}")
-            logger.info(f"  Messages: {len(messages)}")
-            logger.info(f"  Tools: {len(tools) if tools else 0}")
-            logger.info(f"  Temperature: {temperature}")
-            logger.info(f"  Max Tokens: {max_tokens}")
+            log_with_data(logger, 'info', 'Bedrock API 호출',
+                          model=self.model_id,
+                          message_count=len(messages),
+                          tool_count=len(tools) if tools else 0,
+                          temperature=temperature,
+                          max_tokens=max_tokens)
             
             # Bedrock 호출
             response = self.client.converse(**request_params)
             
             stop_reason = response.get('stopReason')
-            logger.info(f"[Bedrock] Response received")
-            logger.info(f"  Stop Reason: {stop_reason}")
-            logger.info(f"  Usage: {response.get('usage', {})}")
+            usage = response.get('usage', {})
+            log_with_data(logger, 'info', 'Bedrock 응답 수신',
+                          stop_reason=stop_reason,
+                          input_tokens=usage.get('inputTokens', 0),
+                          output_tokens=usage.get('outputTokens', 0),
+                          total_tokens=usage.get('totalTokens', 0))
             
             return response
             
         except ClientError as e:
             error_code = e.response['Error']['Code']
             error_message = e.response['Error']['Message']
-            logger.error(f"Bedrock ClientError: {error_code} - {error_message}")
+            log_with_data(logger, 'error', 'Bedrock ClientError',
+                          error_code=error_code,
+                          error_message=error_message)
             raise Exception(f"Bedrock API 호출 실패: {error_message}")
         
         except Exception as e:
-            logger.error(f"Unexpected error in Bedrock call: {str(e)}", exc_info=True)
+            log_with_data(logger, 'error', 'Bedrock 호출 중 예외 발생',
+                          error=str(e))
             raise Exception(f"Bedrock 호출 중 오류 발생: {str(e)}")
     
     def extract_text(self, response: Dict) -> str:

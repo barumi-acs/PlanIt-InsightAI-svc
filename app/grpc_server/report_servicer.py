@@ -11,6 +11,7 @@ from proto import report_service_pb2, report_service_pb2_grpc
 
 from app.clients.bedrock_client import BedrockClient
 from app.services.report_generator import ReportGeneratorService
+from app.core.logging_config import log_with_data
 
 logger = logging.getLogger(__name__)
 
@@ -40,14 +41,17 @@ class ReportServiceServicer(report_service_pb2_grpc.ReportServiceServicer):
             리포트 생성 응답
         """
         try:
-            logger.info(f"[gRPC] GenerateReport called - userId: {request.user_id}, "
-                       f"reportType: {request.report_type}, targetPeriod: {request.target_period}")
+            log_with_data(logger, 'info', 'gRPC 리포트 생성 요청 수신',
+                          userId=request.user_id,
+                          reportType=request.report_type,
+                          targetPeriod=request.target_period)
             
             # JSON 문자열을 딕셔너리로 파싱
             try:
                 statistics_data = json.loads(request.statistics_data)
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse statistics_data JSON: {e}")
+                log_with_data(logger, 'error', 'statistics_data JSON 파싱 실패',
+                              error=str(e))
                 return report_service_pb2.GenerateReportResponse(
                     success=False,
                     report_data="{}",
@@ -118,7 +122,8 @@ class ReportServiceServicer(report_service_pb2_grpc.ReportServiceServicer):
                 report_data = feedback.model_dump(by_alias=True)
                 
             else:
-                logger.error(f"Unsupported report type: {report_type}")
+                log_with_data(logger, 'error', '지원하지 않는 리포트 타입',
+                              reportType=report_type)
                 return report_service_pb2.GenerateReportResponse(
                     success=False,
                     report_data="{}",
@@ -129,8 +134,9 @@ class ReportServiceServicer(report_service_pb2_grpc.ReportServiceServicer):
             # JSON 문자열로 변환
             report_data_json = json.dumps(report_data, ensure_ascii=False)
             
-            logger.info(f"[gRPC] Report generated successfully for userId: {request.user_id}, "
-                       f"reportType: {report_type}")
+            log_with_data(logger, 'info', 'gRPC 리포트 생성 성공',
+                          userId=request.user_id,
+                          reportType=report_type)
             
             return report_service_pb2.GenerateReportResponse(
                 success=True,
@@ -140,7 +146,8 @@ class ReportServiceServicer(report_service_pb2_grpc.ReportServiceServicer):
             )
             
         except Exception as e:
-            logger.error(f"[gRPC] Failed to generate report: {str(e)}", exc_info=True)
+            log_with_data(logger, 'error', 'gRPC 리포트 생성 실패',
+                          error=str(e))
             return report_service_pb2.GenerateReportResponse(
                 success=False,
                 report_data="{}",
