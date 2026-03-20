@@ -32,15 +32,13 @@ from app.grpc_server.report_servicer import ReportServiceServicer
 # Database lifecycle
 from app.clients.database_client import DatabaseClient
 from app.core.config import get_settings
+from app.core.logging_config import setup_logging
 
 # Get settings
 settings = get_settings()
 
-# Logging setup
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# PlanIt 표준 JSON 로깅 설정
+setup_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
 
