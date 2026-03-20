@@ -27,14 +27,16 @@ async def generate_report(request: ReportGenerationRequest):
     Service A가 조회한 통계 데이터를 받아 AI 피드백 생성
     각 리포트 타입별로 해당 데이터만 반환
     """
+    import time
     try:
-        logger.info(f"Report generation requested for user: {request.user_id}, type: {request.report_type}, period: {request.target_period}")
+        logger.debug("[insightAI] 리포트 생성 요청 진입 | user_id=%s, type=%s, period=%s",
+                     request.user_id, request.report_type, request.target_period)
         
         # statisticsData에서 해당 리포트 타입의 데이터만 추출
         report_type = request.report_type.upper()
         stats_data = request.statistics_data
         
-        logger.info(f"Received stats_data: {stats_data}")
+        start = time.perf_counter()
         
         # 리포트 타입별로 개별 피드백 생성
         if report_type == "GROWTH":
@@ -90,19 +92,23 @@ async def generate_report(request: ReportGenerationRequest):
                 'best_focus_time': stats_data.get('bestFocusTime', '08:00-10:00')  # 양쪽 키 모두 지원
             }
             
-            logger.info(f"Summary data prepared: {summary_data}")
+            logger.debug("[insightAI] SUMMARY 데이터 준비 완료 | currentRate=%s, trend=%s",
+                         summary_data.get('currentRate'), summary_data.get('achievementTrend'))
             
             feedback = await report_service._generate_summary_feedback(
                 None, None, None, summary_data
             )
             report_data = feedback.model_dump(by_alias=True)
         else:
+            logger.warning("[insightAI] 지원하지 않는 리포트 타입 요청 | type=%s, user_id=%s", report_type, request.user_id)
             raise HTTPException(
                 status_code=400,
                 detail=f"지원하지 않는 리포트 타입입니다: {report_type}"
             )
         
-        logger.info(f"Report generated successfully for user: {request.user_id}, type: {report_type}")
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        logger.info("[insightAI] 리포트 생성 완료 | user_id=%s, type=%s, duration_ms=%d",
+                    request.user_id, report_type, duration_ms)
         
         # Insight-svc가 기대하는 형식으로 반환
         return {
@@ -114,7 +120,8 @@ async def generate_report(request: ReportGenerationRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Report generation failed: {str(e)}", exc_info=True)
+        logger.error("[insightAI] 리포트 생성 실패 | user_id=%s, type=%s, error=%s",
+                     request.user_id, request.report_type, str(e), exc_info=True)
         return {
             "success": False,
             "reportData": {},

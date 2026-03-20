@@ -9,17 +9,16 @@ from datetime import datetime
 import logging
 
 from app.core.config import get_settings
+from app.core.logging_config import setup_logging
 from app.api import reports, chatbot
 from app.clients.database_client import get_database_client
+from app.middleware.trace import TraceIdMiddleware
 
 # 설정 로드
 settings = get_settings()
 
-# 로깅 설정
-logging.basicConfig(
-    level=getattr(logging, settings.log_level),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# PlanIt 표준 JSON 로깅 설정
+setup_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
 
@@ -27,30 +26,32 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리"""
     # Startup
-    logger.info(f"Starting PlanIt-InsightAI-svc on port {settings.port}")
-    logger.info(f"Environment: {settings.environment}")
-    logger.info(f"AWS Region: {settings.aws_region}")
-    logger.info(f"Bedrock Model: {settings.bedrock_model_id}")
+    logger.info("서비스 시작", extra={'data': {
+        'port': settings.port,
+        'env': settings.environment,
+        'region': settings.aws_region,
+        'model': settings.bedrock_model_id
+    }})
     
     # 데이터베이스 연결 풀 초기화
     try:
         await get_database_client()
-        logger.info("Database connection pool initialized")
+        logger.info("DB 연결 풀 초기화 완료")
     except Exception as e:
-        logger.warning(f"Database initialization failed (will retry on first use): {e}")
+        logger.warning("DB 초기화 실패 (첫 요청 시 재시도)", extra={'data': {'error': str(e)}})
     
     yield
     
     # Shutdown
-    logger.info("Shutting down PlanIt-InsightAI-svc")
+    logger.info("[insightAI] 서비스 종료 시작")
     
     # 데이터베이스 연결 풀 종료
     try:
         db_client = await get_database_client()
         await db_client.close()
-        logger.info("Database connection pool closed")
+        logger.info("[insightAI] DB 연결 풀 종료 완료")
     except Exception as e:
-        logger.error(f"Error closing database connection: {e}")
+        logger.error("[insightAI] DB 연결 풀 종료 실패 | error=%s", str(e), exc_info=True)
 
 
 # FastAPI 애플리케이션 생성
@@ -62,6 +63,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan
 )
+
+# Trace ID 미들웨어 등록 (로그에 traceId 자동 주입)
+app.add_middleware(TraceIdMiddleware)
 
 # 라우터 등록
 app.include_router(reports.router)
@@ -102,5 +106,5 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=settings.port,
-        reload=True if settings.environment == "development" else False
+        reload=True if settings.environment == "dev" else False
     )

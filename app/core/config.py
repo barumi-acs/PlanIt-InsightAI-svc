@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     port: int = 8085
     grpc_port: int = 9095
     log_level: str = "INFO"
-    environment: str = "development"
+    environment: str = "dev"
     
     # AWS Bedrock 설정
     aws_region: str = "us-east-1"

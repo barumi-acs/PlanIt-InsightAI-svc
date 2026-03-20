@@ -35,9 +35,11 @@ class DatabaseClient:
                 autocommit=True,
                 charset='utf8mb4'
             )
-            logger.info(f"Database connection pool created: {settings.db_host}:{settings.db_port}/{settings.db_name}")
+            logger.info("[insightAI] DB 연결 풀 생성 완료 | host=%s:%d, db=%s",
+                        settings.db_host, settings.db_port, settings.db_name)
         except Exception as e:
-            logger.error(f"Failed to create database connection pool: {e}")
+            logger.error("[insightAI] DB 연결 풀 생성 실패 | host=%s:%d, error=%s",
+                         settings.db_host, settings.db_port, str(e), exc_info=True)
             raise
     
     async def close(self):
@@ -45,7 +47,7 @@ class DatabaseClient:
         if self.pool:
             self.pool.close()
             await self.pool.wait_closed()
-            logger.info("Database connection pool closed")
+            logger.info("[insightAI] DB 연결 풀 종료 완료")
     
     async def query_action_logs(
         self,
@@ -97,11 +99,11 @@ class DatabaseClient:
                     await cursor.execute(query, params)
                     results = await cursor.fetchall()
                     
-            logger.info(f"Query action logs: user={user_id}, count={len(results)}")
+            logger.info("[insightAI] action_logs 쿼리 완료 | user_id=%s, count=%d", user_id, len(results))
             return results
         
         except Exception as e:
-            logger.error(f"Failed to query action logs: {e}")
+            logger.error("[insightAI] action_logs 쿼리 실패 | user_id=%s, error=%s", user_id, str(e), exc_info=True)
             raise Exception(f"데이터베이스 조회 실패: {str(e)}")
     
     async def calculate_completion_rate(
@@ -149,11 +151,13 @@ class DatabaseClient:
             else:
                 completion_rate = 0.0
             
-            logger.info(f"Calculate completion rate: user={user_id}, period={period}, rate={completion_rate:.2f}%")
+            logger.info("[insightAI] 완료율 계산 완료 | user_id=%s, period=%s, rate=%.2f%%",
+                        user_id, period, round(completion_rate, 2))
             return round(completion_rate, 2)
         
         except Exception as e:
-            logger.error(f"Failed to calculate completion rate: {e}")
+            logger.error("[insightAI] 완료율 계산 실패 | user_id=%s, period=%s, error=%s",
+                         user_id, period, str(e), exc_info=True)
             raise Exception(f"완료율 계산 실패: {str(e)}")
     
     async def analyze_postpone_pattern(
@@ -205,11 +209,13 @@ class DatabaseClient:
                 "total_postponed": sum(row['postpone_count'] for row in results)
             }
             
-            logger.info(f"Analyze postpone pattern: user={user_id}, worst_day={pattern['worst_day']}")
+            logger.info("[insightAI] 미룸 패턴 분석 완료 | user_id=%s, worst_day=%s",
+                        user_id, pattern['worst_day'])
             return pattern
         
         except Exception as e:
-            logger.error(f"Failed to analyze postpone pattern: {e}")
+            logger.error("[insightAI] 미룸 패턴 분석 실패 | user_id=%s, error=%s",
+                         user_id, str(e), exc_info=True)
             raise Exception(f"패턴 분석 실패: {str(e)}")
     
     async def get_recent_todos(
@@ -248,11 +254,12 @@ class DatabaseClient:
                     await cursor.execute(query, [user_id, limit])
                     results = await cursor.fetchall()
             
-            logger.info(f"Get recent todos: user={user_id}, count={len(results)}")
+            logger.info("[insightAI] 최근 할 일 조회 완료 | user_id=%s, count=%d", user_id, len(results))
             return results
         
         except Exception as e:
-            logger.error(f"Failed to get recent todos: {e}")
+            logger.error("[insightAI] 최근 할 일 조회 실패 | user_id=%s, error=%s",
+                         user_id, str(e), exc_info=True)
             raise Exception(f"할 일 목록 조회 실패: {str(e)}")
 
 

@@ -7,6 +7,7 @@ from typing import Dict
 from datetime import datetime
 
 from app.clients.bedrock_client import BedrockClient
+from app.core.logging_config import log_with_data
 from app.models.response import (
     GrowthFeedback,
     TimelineFeedback,
@@ -45,16 +46,10 @@ class ReportGeneratorService:
         self.bedrock = bedrock_client
     
     async def generate_report(self, stats_data: Dict) -> ReportGenerationResponse:
-        """
-        4단계 Prompt Chaining으로 리포트 생성
-        
-        Args:
-            stats_data: 통계 데이터
-        
-        Returns:
-            리포트 생성 응답
-        """
-        logger.info("Starting report generation")
+        """4단계 Prompt Chaining으로 리포트 생성"""
+        import time
+        log_with_data(logger, 'info', '전체 리포트 생성 시작')
+        start = time.perf_counter()
         
         # Step 1-3: 병렬로 Growth, Timeline, Pattern 피드백 생성
         growth_feedback = await self._generate_growth_feedback(stats_data['growth'])
@@ -77,7 +72,8 @@ class ReportGeneratorService:
             summary=summary_feedback
         )
         
-        logger.info("Report generation completed successfully")
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        log_with_data(logger, 'info', '전체 리포트 생성 완료', duration_ms=duration_ms)
         
         return ReportGenerationResponse(
             success=True,
@@ -86,17 +82,13 @@ class ReportGeneratorService:
         )
     
     async def _generate_growth_feedback(self, growth_data: Dict) -> GrowthFeedback:
-        """
-        성장 피드백 생성
-        
-        Args:
-            growth_data: 성장 데이터
-        
-        Returns:
-            성장 피드백
-        """
+        """성장 피드백 생성"""
+        import time
+        start = time.perf_counter()
         try:
-            logger.info(f"Generating growth feedback with data: {growth_data}")
+            logger.info("[insightAI] Growth 피드백 추론 시작 | topic=%s, growth_rate=%s",
+                        growth_data.get('topic_name'), growth_data.get('growth_rate'))
+            logger.debug("[insightAI] Growth 입력 데이터 | data=%s", growth_data)
             
             system_prompt = """당신은 사용자의 할 일 관리 데이터를 분석하여 긍정적이고 동기부여가 되는 피드백을 제공하는 AI 어시스턴트입니다.
 
@@ -198,18 +190,19 @@ class ReportGeneratorService:
                 max_tokens=500
             )
             
-            logger.info(f"Bedrock response received for growth feedback")
-            
             text = self.bedrock.extract_text(response)
-            logger.info(f"Extracted text: {text}")
+            logger.debug("[insightAI] Growth Bedrock 응답 | text_len=%d", len(text) if text else 0)
             
             parsed = self.bedrock.parse_json_response(text)
-            logger.info(f"Parsed JSON: {parsed}")
+            duration_ms = int((time.perf_counter() - start) * 1000)
+            logger.info("[insightAI] Growth 피드백 추론 완료 | topic=%s, duration_ms=%d",
+                        growth_data.get('topic_name'), duration_ms)
             
             return GrowthFeedback(**parsed)
         
         except Exception as e:
-            logger.error(f"Growth feedback generation failed: {e}", exc_info=True)
+            logger.error("[insightAI] Growth 피드백 생성 실패 | topic=%s, error=%s",
+                         growth_data.get('topic_name'), str(e), exc_info=True)
             # Fallback: 기본 메시지 생성 (음수/양수 분기 처리)
             growth_rate_val = growth_data.get("growth_rate", 0)
             topic = growth_data.get("topic_name", "전체")
@@ -226,16 +219,12 @@ class ReportGeneratorService:
             )
     
     async def _generate_timeline_feedback(self, timeline_data: Dict) -> TimelineFeedback:
-        """
-        타임라인 피드백 생성
-        
-        Args:
-            timeline_data: 타임라인 데이터
-        
-        Returns:
-            타임라인 피드백
-        """
+        """타임라인 피드백 생성"""
+        import time
+        start = time.perf_counter()
         try:
+            logger.info("[insightAI] Timeline 피드백 추론 시작 | data_points=%d",
+                        len(timeline_data.get('chart_data', [])))
             system_prompt = """당신은 사용자의 할 일 관리 데이터를 분석하여 긍정적이고 동기부여가 되는 피드백을 제공하는 AI 어시스턴트입니다.
 주어진 타임라인 데이터를 분석하여 추세를 설명하는 메시지를 생성하세요.
 반드시 JSON 형식으로만 응답하세요."""
@@ -262,7 +251,7 @@ class ReportGeneratorService:
                 }
             ]
             
-            logger.info("Generating timeline feedback")
+            logger.info("[insightAI] Timeline 피드백 추론 시작")
             
             response = await self.bedrock.converse(
                 messages=messages,
@@ -271,16 +260,13 @@ class ReportGeneratorService:
                 max_tokens=500
             )
             
-            logger.info("Bedrock response received for timeline feedback")
-            
             text = self.bedrock.extract_text(response)
-            logger.info(f"Extracted text: {text}")
+            logger.debug("[insightAI] Timeline Bedrock 응답 | text_len=%d", len(text) if text else 0)
             
             if not text:
                 raise Exception("Bedrock returned empty response")
             
             parsed = self.bedrock.parse_json_response(text)
-            logger.info(f"Parsed JSON: {parsed}")
             
             # chartData를 ChartDataPointResponse로 변환
             chart_data_responses = [
@@ -288,13 +274,16 @@ class ReportGeneratorService:
                 for item in parsed.get('chartData', timeline_data.get('chart_data', []))
             ]
             
+            duration_ms = int((time.perf_counter() - start) * 1000)
+            logger.info("[insightAI] Timeline 피드백 추론 완료 | duration_ms=%d", duration_ms)
+            
             return TimelineFeedback(
                 chart_data=chart_data_responses,
                 message=parsed.get('message', DEFAULT_TEMPLATES["timeline"]["message"])
             )
         
         except Exception as e:
-            logger.error(f"Timeline feedback generation failed: {str(e)}", exc_info=True)
+            logger.error("[insightAI] Timeline 피드백 생성 실패 | error=%s", str(e), exc_info=True)
             chart_data_responses = [
                 ChartDataPointResponse(**item)
                 for item in timeline_data.get('chart_data', [])
@@ -305,16 +294,12 @@ class ReportGeneratorService:
             )
     
     async def _generate_pattern_feedback(self, pattern_data: Dict) -> PatternFeedback:
-        """
-        패턴 피드백 생성
-        
-        Args:
-            pattern_data: 패턴 데이터
-        
-        Returns:
-            패턴 피드백
-        """
+        """패턴 피드백 생성"""
+        import time
+        start = time.perf_counter()
         try:
+            logger.info("[insightAI] Pattern 피드백 추론 시작 | daily_stats_count=%d",
+                        len(pattern_data.get('daily_stats', [])))
             system_prompt = """당신은 사용자의 할 일 관리 데이터를 분석하여 긍정적이고 동기부여가 되는 피드백을 제공하는 AI 어시스턴트입니다.
 주어진 요일별 패턴 데이터를 분석하여 개선 제안을 포함한 메시지를 생성하세요.
 반드시 JSON 형식으로만 응답하세요."""
@@ -356,7 +341,7 @@ class ReportGeneratorService:
                 }
             ]
             
-            logger.info("Generating pattern feedback")
+            logger.info("[insightAI] Pattern 피드백 추론 시작")
             
             response = await self.bedrock.converse(
                 messages=messages,
@@ -365,22 +350,23 @@ class ReportGeneratorService:
                 max_tokens=500
             )
             
-            logger.info("Bedrock response received for pattern feedback")
-            
             text = self.bedrock.extract_text(response)
-            logger.info(f"Extracted text: {text}")
+            logger.debug("[insightAI] Pattern Bedrock 응답 | text_len=%d", len(text) if text else 0)
             
             if not text:
                 raise Exception("Bedrock returned empty response")
             
             parsed = self.bedrock.parse_json_response(text)
-            logger.info(f"Parsed JSON: {parsed}")
             
             # chartData를 DailyStatsResponse로 변환
             chart_data_responses = [
                 DailyStatsResponse(**item)
                 for item in parsed.get('chartData', daily_stats)
             ]
+            
+            duration_ms = int((time.perf_counter() - start) * 1000)
+            logger.info("[insightAI] Pattern 피드백 추론 완료 | worst_day=%s, duration_ms=%d",
+                        parsed.get('worstDay', worst_day), duration_ms)
             
             return PatternFeedback(
                 worst_day=parsed.get('worstDay', worst_day),
@@ -390,7 +376,7 @@ class ReportGeneratorService:
             )
         
         except Exception as e:
-            logger.error(f"Pattern feedback generation failed: {str(e)}", exc_info=True)
+            logger.error("[insightAI] Pattern 피드백 생성 실패 | error=%s", str(e), exc_info=True)
             daily_stats = pattern_data.get('daily_stats', [])
             
             if daily_stats:
@@ -421,21 +407,11 @@ class ReportGeneratorService:
         pattern: PatternFeedback,
         summary_data: Dict
     ) -> SummaryFeedback:
-        """
-        종합 피드백 생성 (Prompt Chaining - 이전 3개 결과 참조)
-        
-        Args:
-            growth: 성장 피드백
-            timeline: 타임라인 피드백
-            pattern: 패턴 피드백
-            summary_data: 요약 데이터
-        
-        Returns:
-            종합 피드백
-        """
+        """종합 피드백 생성 (Prompt Chaining - 이전 3개 결과 참조)"""
+        import time
+        start = time.perf_counter()
         try:
-            # 디버깅 로그: 실제 입력 데이터 확인
-            logger.info(f"Summary Prompt Input Data: {summary_data}")
+            logger.debug("[insightAI] Summary 입력 데이터 | summary_data=%s", summary_data)
             
             # None 체크 및 안전한 메시지 추출
             growth_msg = growth.message if growth and hasattr(growth, 'message') else "성장 데이터 분석 중"
@@ -450,7 +426,8 @@ class ReportGeneratorService:
             achievement_trend = summary_data.get('achievement_trend', summary_data.get('achievementTrend', '0%'))
             best_focus_time = summary_data.get('bestFocusTime', summary_data.get('best_focus_time', '08:00-10:00'))
             
-            logger.info(f"Extracted values - currentRate: {current_rate}, achievementTrend: {achievement_trend}, bestFocusTime: {best_focus_time}")
+            logger.info("[insightAI] Summary 추출값 확인 | currentRate=%s, achievementTrend=%s, bestFocusTime=%s",
+                        current_rate, achievement_trend, best_focus_time)
             
             system_prompt = """당신은 사용자의 할 일 관리 성과를 분석하여 긍정적이고 동기부여가 되는 피드백을 제공하는 AI 어시스턴트입니다.
 
@@ -519,8 +496,8 @@ class ReportGeneratorService:
                 }
             ]
             
-            logger.info("Generating summary feedback with enforced positive prompt")
-            logger.info(f"Prompt includes: currentRate={current_rate}%, achievementTrend={achievement_trend}, bestFocusTime={best_focus_time}")
+            logger.info("[insightAI] Summary 피드백 추론 시작 | currentRate=%s, trend=%s, bestFocusTime=%s",
+                        current_rate, achievement_trend, best_focus_time)
             
             response = await self.bedrock.converse(
                 messages=messages,
@@ -529,21 +506,20 @@ class ReportGeneratorService:
                 max_tokens=500
             )
             
-            logger.info("Bedrock response received for summary feedback")
-            
             text = self.bedrock.extract_text(response)
-            logger.info(f"Extracted text: {text}")
+            logger.debug("[insightAI] Summary Bedrock 응답 | text_len=%d", len(text) if text else 0)
             
             if not text:
                 raise Exception("Bedrock returned empty response")
             
             parsed = self.bedrock.parse_json_response(text)
-            logger.info(f"Parsed JSON: {parsed}")
+            duration_ms = int((time.perf_counter() - start) * 1000)
+            logger.info("[insightAI] Summary 피드백 추론 완료 | duration_ms=%d", duration_ms)
             
             return SummaryFeedback(**parsed)
         
         except Exception as e:
-            logger.error(f"Summary feedback generation failed: {str(e)}", exc_info=True)
+            logger.error("[insightAI] Summary 피드백 생성 실패 | error=%s", str(e), exc_info=True)
             # Fallback: 실제 수치를 사용한 기본 메시지
             current_rate = summary_data.get('currentRate', summary_data.get('completion_rate', 50))
             achievement_trend = summary_data.get('achievementTrend', summary_data.get('achievement_trend', '0%'))

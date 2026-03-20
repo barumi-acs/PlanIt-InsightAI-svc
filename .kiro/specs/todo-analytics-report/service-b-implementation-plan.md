@@ -328,7 +328,7 @@ service-b/
 # 서버 설정
 PORT=8000
 LOG_LEVEL=INFO
-ENVIRONMENT=development
+ENVIRONMENT=dev
 
 # AWS Bedrock 설정
 AWS_REGION=us-east-1
@@ -339,13 +339,13 @@ BEDROCK_TEMPERATURE=0.7
 # MariaDB 설정 (MCP Tool Use용)
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=plainit_db
+DB_NAME=planit_insight_db
 DB_USER=root
 DB_PASSWORD=root
 DB_POOL_SIZE=5
 
 # Service A 연동 (향후 확장용)
-SERVICE_A_BASE_URL=http://localhost:8080
+SERVICE_A_BASE_URL=http://localhost:8084
 
 # 타임아웃 설정
 BEDROCK_TIMEOUT=30
@@ -418,7 +418,7 @@ class Settings(BaseSettings):
     # 서버 설정
     port: int = 8000
     log_level: str = "INFO"
-    environment: str = "development"
+    environment: str = "dev"
     
     # AWS Bedrock
     aws_region: str = "us-east-1"
@@ -430,14 +430,14 @@ class Settings(BaseSettings):
     # MariaDB
     db_host: str = "localhost"
     db_port: int = 3306
-    db_name: str = "plainit_db"
+    db_name: str = "planit_insight_db"
     db_user: str = "root"
     db_password: str = "root"
     db_pool_size: int = 5
     db_query_timeout: int = 10
     
     # Service A
-    service_a_base_url: str = "http://localhost:8080"
+    service_a_base_url: str = "http://localhost:8084"
     
     class Config:
         env_file = ".env"
@@ -986,7 +986,7 @@ docker run -d \
   -e AWS_REGION=us-east-1 \
   -e DB_HOST=host.docker.internal \
   -e DB_PORT=3306 \
-  -e DB_NAME=plainit_db \
+  -e DB_NAME=planit_insight_db \
   -e DB_USER=root \
   -e DB_PASSWORD=root \
   planit-ai-service:latest

@@ -128,19 +128,12 @@ action_type 파라미터 사용법:
     async def process_query(self, user_id: str, query: str) -> Dict:
         """
         사용자 질의 처리 (Bedrock Tool Use 워크플로우)
-        
-        Args:
-            user_id: 사용자 ID
-            query: 사용자 질의
-        
-        Returns:
-            답변 및 출처 정보
         """
-        logger.info("-" * 80)
-        logger.info(f"[ChatbotService] Starting process_query")
-        logger.info(f"  User ID: {user_id}")
-        logger.info(f"  Query: {query}")
-        logger.info("-" * 80)
+        import time
+        logger.info("[insightAI] 챗봇 추론 시작 | user_id=%s, query_len=%d", user_id, len(query))
+        logger.debug("[insightAI] 챗봇 질의 내용 | user_id=%s, query=%s", user_id, query)
+        
+        start = time.perf_counter()
         
         # 대화 컨텍스트 초기화
         messages = [
@@ -235,7 +228,7 @@ action_type 파라미터 사용법:
         max_iterations = 5  # 무한 루프 방지
         
         for iteration in range(max_iterations):
-            logger.info(f"[ChatbotService] Iteration {iteration + 1}/{max_iterations}")
+            logger.debug("[insightAI] Bedrock 호출 | user_id=%s, iteration=%d/%d", user_id, iteration + 1, max_iterations)
             
             # Bedrock Converse API 호출 (Tool Use 활성화)
             response = await self.bedrock.converse(
@@ -247,11 +240,11 @@ action_type 파라미터 사용법:
             )
             
             stop_reason = response.get('stopReason')
-            logger.info(f"[ChatbotService] Stop reason: {stop_reason}")
+            logger.debug("[insightAI] Bedrock 응답 수신 | stop_reason=%s", stop_reason)
             
             # Tool Use 확인
             if stop_reason == 'tool_use' or self.bedrock.has_tool_use(response):
-                logger.info(f"[ChatbotService] Tool use detected, processing...")
+                logger.debug("[insightAI] Tool Use 감지 | user_id=%s", user_id)
                 
                 # Assistant의 응답(toolUse 포함)을 대화 컨텍스트에 추가
                 assistant_message = response['output']['message']
@@ -269,9 +262,8 @@ action_type 파라미터 사용법:
                         tool_name = tool_use['name']
                         tool_input = tool_use.get('input', {})
                         
-                        logger.info(f"[ChatbotService] Executing tool: {tool_name}")
-                        logger.info(f"  Tool Use ID: {tool_use_id}")
-                        logger.info(f"  Tool Input: {tool_input}")
+                        logger.info("[insightAI] Tool 실행 시작 | tool=%s, user_id=%s", tool_name, user_id)
+                        logger.debug("[insightAI] Tool 입력 파라미터 | tool=%s, input=%s", tool_name, tool_input)
                         
                         # Tool 실행
                         tool_result = await self._execute_tool(
@@ -299,17 +291,12 @@ action_type 파라미터 사용법:
                     "content": tool_results
                 })
                 
-                logger.info(f"[ChatbotService] Tool results added to context, continuing conversation...")
-                
             elif stop_reason == 'end_turn':
                 # 최종 답변 생성
                 answer = self.bedrock.extract_text(response)
-                logger.info("-" * 80)
-                logger.info(f"[ChatbotService] Final answer generated")
-                logger.info(f"  Answer preview: {answer[:100]}...")
-                logger.info(f"  Answer length: {len(answer)} chars")
-                logger.info(f"  Sources used: {', '.join(sources) if sources else 'None'}")
-                logger.info("-" * 80)
+                duration_ms = int((time.perf_counter() - start) * 1000)
+                logger.info("[insightAI] 챗봇 추론 완료 | user_id=%s, duration_ms=%d, answer_len=%d, sources=%s",
+                            user_id, duration_ms, len(answer), sources if sources else ["직접 답변"])
                 
                 return {
                     "answer": answer,
@@ -318,7 +305,7 @@ action_type 파라미터 사용법:
                 }
             else:
                 # 예상치 못한 stopReason
-                logger.warning(f"[ChatbotService] Unexpected stop reason: {stop_reason}")
+                logger.warning("[insightAI] 예상치 못한 stop_reason | user_id=%s, stop_reason=%s", user_id, stop_reason)
                 answer = self.bedrock.extract_text(response)
                 if answer:
                     return {
@@ -327,7 +314,7 @@ action_type 파라미터 사용법:
                         "generated_at": datetime.now().isoformat()
                     }
                 else:
-                    logger.error(f"[ChatbotService] No text content in response with stop reason: {stop_reason}")
+                    logger.error("[insightAI] 응답 텍스트 없음 | user_id=%s, stop_reason=%s", user_id, stop_reason)
                     return {
                         "answer": "죄송합니다. 답변을 생성하는 중 문제가 발생했습니다.",
                         "sources": sources,
@@ -335,11 +322,9 @@ action_type 파라미터 사용법:
                     }
         
         # 최대 반복 횟수 초과
-        logger.warning("-" * 80)
-        logger.warning(f"[ChatbotService] Max iterations reached")
-        logger.warning(f"  Query: {query}")
-        logger.warning(f"  Iterations: {max_iterations}")
-        logger.warning("-" * 80)
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        logger.warning("[insightAI] 최대 반복 횟수 초과 | user_id=%s, max_iterations=%d, duration_ms=%d",
+                       user_id, max_iterations, duration_ms)
         return {
             "answer": "죄송합니다. 질문을 처리하는 데 시간이 너무 오래 걸렸습니다. 질문을 더 구체적으로 해주시겠어요?",
             "sources": sources,
@@ -352,31 +337,16 @@ action_type 파라미터 사용법:
         tool_input: Dict,
         user_id: str
     ) -> Dict:
-        """
-        Tool 실행 및 결과 반환
-        
-        Args:
-            tool_name: Tool 이름
-            tool_input: Tool 입력 파라미터
-            user_id: 사용자 ID
-        
-        Returns:
-            Tool 실행 결과 (JSON 직렬화 가능한 형태)
-        """
-        logger.info("=" * 80)
-        logger.info(f"[Tool Execution] {tool_name}")
-        logger.info(f"  User ID: {user_id}")
-        logger.info(f"  Input Parameters: {tool_input}")
-        logger.info("=" * 80)
+        """Tool 실행 및 결과 반환"""
+        import time
+        logger.info("[insightAI] Tool 실행 | tool=%s, user_id=%s", tool_name, user_id)
+        start = time.perf_counter()
         
         try:
             if tool_name == "query_user_action_logs":
-                logger.info(f"[Tool] Querying action logs from database...")
-                logger.info(f"  Query Details:")
-                logger.info(f"    - user_id: {user_id}")
-                logger.info(f"    - start_date: {tool_input['start_date']}")
-                logger.info(f"    - end_date: {tool_input['end_date']}")
-                logger.info(f"    - action_type: {tool_input.get('action_type', 'ALL (no filter)')}")
+                logger.debug("[insightAI] action_logs 조회 | user_id=%s, start=%s, end=%s, action_type=%s",
+                             user_id, tool_input['start_date'], tool_input['end_date'],
+                             tool_input.get('action_type', 'ALL'))
                 
                 results = await self.db.query_action_logs(
                     user_id=user_id,
@@ -385,21 +355,12 @@ action_type 파라미터 사용법:
                     action_type=tool_input.get('action_type')
                 )
                 
-                logger.info(f"[Tool] Query returned {len(results)} records")
-                
-                # 결과 샘플 로깅
-                if len(results) > 0:
-                    logger.info(f"[Tool] Sample (first record): {results[0]}")
+                if len(results) == 0:
+                    logger.warning("[insightAI] action_logs 조회 결과 없음 | user_id=%s, start=%s, end=%s, action_type=%s",
+                                   user_id, tool_input['start_date'], tool_input['end_date'],
+                                   tool_input.get('action_type'))
                 else:
-                    logger.warning("=" * 80)
-                    logger.warning(f"[Tool] ⚠️ WARNING: No records found!")
-                    logger.warning(f"  This means the query returned 0 results.")
-                    logger.warning(f"  Possible causes:")
-                    logger.warning(f"    1. user_id '{user_id}' has no data in database")
-                    logger.warning(f"    2. Date range has no data: {tool_input['start_date']} ~ {tool_input['end_date']}")
-                    logger.warning(f"    3. action_type filter '{tool_input.get('action_type')}' excludes all records")
-                    logger.warning(f"  Run 'python check_data.py' to verify database contents")
-                    logger.warning("=" * 80)
+                    logger.info("[insightAI] action_logs 조회 완료 | user_id=%s, count=%d", user_id, len(results))
                 
                 # datetime 객체를 문자열로 변환
                 serialized_results = []
@@ -414,7 +375,7 @@ action_type 파라미터 사용법:
                             serialized_row[key] = str(value) if not isinstance(value, (int, float, bool, str)) else value
                     serialized_results.append(serialized_row)
                 
-                # 요일별 집계 추가 (Claude가 쉽게 이해할 수 있도록)
+                # 요일별 집계 추가
                 day_counts = {}
                 for row in serialized_results:
                     day = row.get('day_of_week', 'UNKNOWN')
@@ -428,12 +389,12 @@ action_type 파라미터 사용법:
                 }
             
             elif tool_name == "calculate_completion_rate":
-                logger.info(f"[Tool] Calculating completion rate...")
                 rate = await self.db.calculate_completion_rate(
                     user_id=user_id,
                     period=tool_input['period']
                 )
-                logger.info(f"[Tool] Completion rate: {rate}%")
+                logger.info("[insightAI] 완료율 계산 완료 | user_id=%s, period=%s, rate=%.2f%%",
+                            user_id, tool_input['period'], rate)
                 return {
                     "success": True,
                     "completion_rate": float(rate),
@@ -441,25 +402,24 @@ action_type 파라미터 사용법:
                 }
             
             elif tool_name == "analyze_postpone_pattern":
-                logger.info(f"[Tool] Analyzing postpone pattern...")
                 pattern = await self.db.analyze_postpone_pattern(
                     user_id=user_id,
                     start_date=tool_input['start_date'],
                     end_date=tool_input['end_date']
                 )
-                logger.info(f"[Tool] Pattern analysis complete: worst_day={pattern.get('worst_day')}")
+                logger.info("[insightAI] 미룸 패턴 분석 완료 | user_id=%s, worst_day=%s",
+                            user_id, pattern.get('worst_day'))
                 return {
                     "success": True,
                     "pattern": pattern
                 }
             
             elif tool_name == "get_recent_todos":
-                logger.info(f"[Tool] Getting recent todos...")
                 todos = await self.db.get_recent_todos(
                     user_id=user_id,
                     limit=tool_input.get('limit', 10)
                 )
-                logger.info(f"[Tool] Retrieved {len(todos)} todos")
+                logger.info("[insightAI] 최근 할 일 조회 완료 | user_id=%s, count=%d", user_id, len(todos))
                 
                 # datetime 객체를 문자열로 변환
                 serialized_todos = []
@@ -481,15 +441,20 @@ action_type 파라미터 사용법:
                 }
             
             else:
-                logger.error(f"[Tool] Unknown tool: {tool_name}")
+                logger.error("[insightAI] 알 수 없는 Tool 요청 | tool=%s", tool_name)
                 return {
                     "success": False,
                     "error": f"알 수 없는 도구: {tool_name}"
                 }
         
         except Exception as e:
-            logger.error(f"[Tool] Execution failed: {tool_name}, error: {e}")
+            logger.error("[insightAI] Tool 실행 실패 | tool=%s, user_id=%s, error=%s",
+                         tool_name, user_id, str(e), exc_info=True)
             return {
                 "success": False,
                 "error": str(e)
             }
+        
+        finally:
+            duration_ms = int((time.perf_counter() - start) * 1000)
+            logger.debug("[insightAI] Tool 실행 종료 | tool=%s, duration_ms=%d", tool_name, duration_ms)

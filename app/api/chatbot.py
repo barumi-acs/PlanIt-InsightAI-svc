@@ -57,27 +57,27 @@ async def query_chatbot(request: ChatQueryRequest):
     
     @deprecated 2026-03-08
     """
-    logger.warning("[DEPRECATED] Direct REST API call detected. "
-                   "Please migrate to Java BFF: /api/v1/insight/chat/query")
+    import time
+    logger.warning("[insightAI] Deprecated REST API 직접 호출 감지 | migrate_to=/api/v1/insight/chat/query")
     
     try:
-        logger.info(f"Chatbot query requested: user={request.user_id}, query={request.query}")
+        logger.debug("[insightAI] 챗봇 질의 요청 진입 | user_id=%s, query_len=%d", request.user_id, len(request.query))
         
-        # ChatbotService 가져오기
         service = await get_chatbot_service()
         
-        # 질의 처리
+        start = time.perf_counter()
         result = await service.process_query(
             user_id=request.user_id,
             query=request.query
         )
+        duration_ms = int((time.perf_counter() - start) * 1000)
         
-        logger.info(f"Chatbot query completed: user={request.user_id}")
+        logger.info("[insightAI] 챗봇 질의 완료 | user_id=%s, duration_ms=%d", request.user_id, duration_ms)
         
         return ChatQueryResponse(**result)
     
     except Exception as e:
-        logger.error(f"Chatbot query failed: {str(e)}", exc_info=True)
+        logger.error("[insightAI] 챗봇 질의 실패 | user_id=%s, error=%s", request.user_id, str(e), exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"챗봇 질의 처리 중 오류가 발생했습니다: {str(e)}"
