@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from app.clients.bedrock_client import BedrockClient
 from app.clients.database_client import DatabaseClient
+from app.core.logging_config import log_with_data
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ action_type 파라미터 사용법:
         사용자 질의 처리 (Bedrock Tool Use 워크플로우)
         """
         import time
-        logger.info("[insightAI] 챗봇 추론 시작 | user_id=%s, query_len=%d", user_id, len(query))
+        log_with_data(logger, 'info', '챗봇 추론 시작', user_id=user_id, query_len=len(query))
         logger.debug("[insightAI] 챗봇 질의 내용 | user_id=%s, query=%s", user_id, query)
         
         start = time.perf_counter()
@@ -295,8 +296,10 @@ action_type 파라미터 사용법:
                 # 최종 답변 생성
                 answer = self.bedrock.extract_text(response)
                 duration_ms = int((time.perf_counter() - start) * 1000)
-                logger.info("[insightAI] 챗봇 추론 완료 | user_id=%s, duration_ms=%d, answer_len=%d, sources=%s",
-                            user_id, duration_ms, len(answer), sources if sources else ["직접 답변"])
+                log_with_data(logger, 'info', '챗봇 추론 완료',
+                              user_id=user_id, duration_ms=duration_ms, 
+                              answer_len=len(answer), 
+                              sources=sources if sources else ["직접 답변"])
                 
                 return {
                     "answer": answer,
@@ -323,8 +326,8 @@ action_type 파라미터 사용법:
         
         # 최대 반복 횟수 초과
         duration_ms = int((time.perf_counter() - start) * 1000)
-        logger.warning("[insightAI] 최대 반복 횟수 초과 | user_id=%s, max_iterations=%d, duration_ms=%d",
-                       user_id, max_iterations, duration_ms)
+        log_with_data(logger, 'warning', '최대 반복 횟수 초과',
+                      user_id=user_id, max_iterations=max_iterations, duration_ms=duration_ms)
         return {
             "answer": "죄송합니다. 질문을 처리하는 데 시간이 너무 오래 걸렸습니다. 질문을 더 구체적으로 해주시겠어요?",
             "sources": sources,
@@ -339,7 +342,7 @@ action_type 파라미터 사용법:
     ) -> Dict:
         """Tool 실행 및 결과 반환"""
         import time
-        logger.info("[insightAI] Tool 실행 | tool=%s, user_id=%s", tool_name, user_id)
+        log_with_data(logger, 'info', 'Tool 실행', tool=tool_name, user_id=user_id)
         start = time.perf_counter()
         
         try:
@@ -356,11 +359,13 @@ action_type 파라미터 사용법:
                 )
                 
                 if len(results) == 0:
-                    logger.warning("[insightAI] action_logs 조회 결과 없음 | user_id=%s, start=%s, end=%s, action_type=%s",
-                                   user_id, tool_input['start_date'], tool_input['end_date'],
-                                   tool_input.get('action_type'))
+                    log_with_data(logger, 'warning', 'action_logs 조회 결과 없음',
+                                  user_id=user_id, start_date=tool_input['start_date'], 
+                                  end_date=tool_input['end_date'],
+                                  action_type=tool_input.get('action_type'))
                 else:
-                    logger.info("[insightAI] action_logs 조회 완료 | user_id=%s, count=%d", user_id, len(results))
+                    log_with_data(logger, 'info', 'action_logs 조회 완료',
+                                  user_id=user_id, count=len(results))
                 
                 # datetime 객체를 문자열로 변환
                 serialized_results = []
@@ -393,8 +398,8 @@ action_type 파라미터 사용법:
                     user_id=user_id,
                     period=tool_input['period']
                 )
-                logger.info("[insightAI] 완료율 계산 완료 | user_id=%s, period=%s, rate=%.2f%%",
-                            user_id, tool_input['period'], rate)
+                log_with_data(logger, 'info', '완료율 계산 완료',
+                              user_id=user_id, period=tool_input['period'], rate=float(rate))
                 return {
                     "success": True,
                     "completion_rate": float(rate),
@@ -407,8 +412,8 @@ action_type 파라미터 사용법:
                     start_date=tool_input['start_date'],
                     end_date=tool_input['end_date']
                 )
-                logger.info("[insightAI] 미룸 패턴 분석 완료 | user_id=%s, worst_day=%s",
-                            user_id, pattern.get('worst_day'))
+                log_with_data(logger, 'info', '미룸 패턴 분석 완료',
+                              user_id=user_id, worst_day=pattern.get('worst_day'))
                 return {
                     "success": True,
                     "pattern": pattern
@@ -419,7 +424,8 @@ action_type 파라미터 사용법:
                     user_id=user_id,
                     limit=tool_input.get('limit', 10)
                 )
-                logger.info("[insightAI] 최근 할 일 조회 완료 | user_id=%s, count=%d", user_id, len(todos))
+                log_with_data(logger, 'info', '최근 할 일 조회 완료',
+                              user_id=user_id, count=len(todos))
                 
                 # datetime 객체를 문자열로 변환
                 serialized_todos = []
