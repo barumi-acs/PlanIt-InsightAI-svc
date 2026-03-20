@@ -33,7 +33,10 @@ class PlanItJsonFormatter(jsonlogger.JsonFormatter):
         super().add_fields(log_record, record, message_dict)
         
         # 필드명 매핑 (PlanIt 표준)
-        log_record['timestamp'] = self.formatTime(record, '%Y-%m-%dT%H:%M:%S.%fZ')
+        from datetime import datetime, timezone
+        # ISO8601 UTC 포맷 (밀리초 3자리)
+        now = datetime.now(timezone.utc)
+        log_record['timestamp'] = now.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
         log_record['level'] = record.levelname
         log_record['service'] = 'insightai-svc'
         log_record['logger'] = record.name
@@ -75,10 +78,11 @@ def setup_logging(log_level: str = "INFO"):
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     
-    # JSON 포맷 핸들러 추가
+    # JSON 포맷 핸들러 추가 (ensure_ascii=False로 한글 깨짐 방지)
     json_handler = logging.StreamHandler(sys.stdout)
     formatter = PlanItJsonFormatter(
-        '%(timestamp)s %(level)s %(service)s %(traceId)s %(logger)s %(message)s'
+        '%(timestamp)s %(level)s %(service)s %(traceId)s %(logger)s %(message)s',
+        json_ensure_ascii=False  # 한글 깨짐 방지
     )
     json_handler.setFormatter(formatter)
     root_logger.addHandler(json_handler)
