@@ -102,9 +102,12 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
+    
+    # uvicorn 로깅 설정 비활성화 (PlanIt 표준 로깅 사용)
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=settings.port,
-        reload=True if settings.environment == "dev" else False
+        reload=True if settings.environment == "dev" else False,
+        log_config=None  # uvicorn 기본 로깅 비활성화
     )

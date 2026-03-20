@@ -38,4 +38,5 @@ USER appuser
 EXPOSE 8085 9095
 
 #  [수정 3] exec를 추가하여 EKS(K8s)의 SIGTERM(종료 신호)을 앱이 직접 받도록 수정합니다.
-CMD ["sh", "-c", "if [ \"$APP_MODE\" = \"grpc\" ]; then exec python -m app.main_grpc; else exec python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8085}; fi"]
+# --log-config 제거하여 PlanIt 표준 JSON 로깅 사용
+CMD ["sh", "-c", "if [ \"$APP_MODE\" = \"grpc\" ]; then exec python -m app.main_grpc; else exec python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8085} --log-config /dev/null; fi"]
