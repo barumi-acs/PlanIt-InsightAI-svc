@@ -51,6 +51,8 @@ class PlanItJsonFormatter(jsonlogger.JsonFormatter):
         if hasattr(record, 'data') and record.data:
             for key, value in record.data.items():
                 log_record[key] = value
+            # data 객체 자체는 제거 (중복 방지)
+            log_record.pop('data', None)
         
         # 에러 발생 시 stack_trace 추가
         if record.exc_info:
