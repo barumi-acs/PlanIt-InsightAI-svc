@@ -7,7 +7,7 @@ on:
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: pi-insightai
-  SERVICE_NAME: planit-instightai-svc
+  SERVICE_NAME: planit-insightai-svc
 
 jobs:
   build-and-deploy:
@@ -80,7 +80,7 @@ jobs:
         if git diff --cached --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "chore(strategy-svc): update image to ${{ github.sha }}"
+          git commit -m "chore(insightai-svc): update image to ${{ github.sha }}"
           git push origin develop
         fi
 
