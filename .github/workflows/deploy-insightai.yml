@@ -81,7 +81,7 @@ jobs:
           echo "No changes to commit"
         else
           git commit -m "chore(strategy-svc): update image to ${{ github.sha }}"
-            it push origin develop
+          git push origin develop
         fi
 
       # 🔥 실패 알림
